@@ -1,0 +1,56 @@
+import { ArrowRight } from "lucide-react";
+import { type ReactNode } from "react";
+import { Button } from "antd";
+import { useNavigate } from "react-router-dom";
+
+import { navigationTools } from "@/constant/navigation-tools";
+
+function Highlighter({ action, color, children }: { action: "highlight" | "underline"; color: string; children: ReactNode }) {
+    return (
+        <span className="relative inline-block px-1">
+            {action === "highlight" ? (
+                <span className="absolute inset-x-0 bottom-0 top-1 rounded-sm opacity-45" style={{ backgroundColor: color }} />
+            ) : (
+                <span className="absolute inset-x-0 bottom-0 h-1 rounded-full opacity-80" style={{ backgroundColor: color }} />
+            )}
+            <span className="relative font-medium text-stone-800 dark:text-stone-200">{children}</span>
+        </span>
+    );
+}
+
+export default function IndexPage() {
+    const navigate = useNavigate();
+    const [primaryTool] = navigationTools;
+
+    return (
+        <main className="relative h-full overflow-hidden bg-background bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] text-stone-950 dark:bg-[radial-gradient(rgba(245,245,244,.18)_1px,transparent_1px)] dark:text-stone-100">
+            <section className="relative mx-auto flex h-full max-w-7xl flex-col items-center justify-center overflow-hidden px-4 text-center sm:px-6">
+                <div className="pointer-events-none absolute left-[15%] top-24 size-20 rounded-full border border-dashed border-stone-200 dark:border-stone-800" />
+                <div className="pointer-events-none absolute bottom-24 right-[23%] size-20 rounded-full border border-dashed border-stone-200 dark:border-stone-800" />
+
+                <h1 className="ai-title-aurora max-w-5xl text-balance text-5xl font-semibold tracking-normal sm:text-7xl lg:text-8xl">无限画布</h1>
+                <p className="mt-8 w-full min-w-0 max-w-3xl break-words text-base leading-7 text-stone-500 sm:text-balance sm:text-lg sm:leading-8 dark:text-stone-400">
+                    在
+                    <Highlighter action="underline" color="#FF9800">
+                        无限画布
+                    </Highlighter>
+                    中生成、连接和重组
+                    <br className="sm:hidden" />
+                    <Highlighter action="highlight" color="#87CEFA">
+                        图片、文字与图形
+                    </Highlighter>
+                    <br className="sm:hidden" />
+                    ，让创作从单次生成变成连续推演。
+                </p>
+                <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+                    <Button type="primary" size="large" onClick={() => navigate(`/${primaryTool.slug}`)} icon={<ArrowRight className="size-4" />} iconPlacement="end">
+                        开始使用
+                    </Button>
+                    <Button size="large" onClick={() => navigate("/canvas")}>
+                        打开画布
+                    </Button>
+                </div>
+            </section>
+        </main>
+    );
+}

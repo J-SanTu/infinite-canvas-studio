@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+Windows/
+macOS/
+最终交付/
+local-tests/
+.pnpm-store/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+server/data/

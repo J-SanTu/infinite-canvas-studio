@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Santu Infinite Canvas</title>
+  <desc id="desc">A quiet, Japanese editorial-style diagram showing prompts and media moving through a connected canvas into reusable outputs.</desc>
+  <rect width="1200" height="420" fill="#f6f3ed"/>
+  <path d="M64 54H1136M64 368H1136" stroke="#d8d3c9" stroke-width="2"/>
+  <path d="M64 54V368" stroke="#c65a43" stroke-width="5"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <text x="92" y="86" fill="#c65a43" font-size="18" font-weight="700" letter-spacing="4">SANTU / CREATIVE SYSTEM</text>
+    <text x="92" y="154" fill="#202a27" font-size="58" font-weight="700">Santu Infinite</text>
+    <text x="92" y="218" fill="#202a27" font-size="58" font-weight="700">Canvas</text>
+    <text x="94" y="264" fill="#58625e" font-size="23">Connect ideas, references, and media into repeatable visual work.</text>
+    <text x="94" y="306" fill="#7d8781" font-size="16" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" letter-spacing="1">NODE GRAPH  /  LOCAL CACHE  /  TRACEABLE RUNS</text>
+    <g transform="translate(94 334)">
+      <rect width="220" height="34" fill="#202a27"/>
+      <text x="110" y="23" text-anchor="middle" fill="#f6f3ed" font-size="15" font-weight="700" letter-spacing="2">SANTU WORKSPACE</text>
+    </g>
+  </g>
+  <g transform="translate(576 90)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <path d="M30 85H150M270 85H390M390 85H570" fill="none" stroke="#7c9a87" stroke-width="3"/>
+    <circle cx="30" cy="85" r="7" fill="#c65a43"/><circle cx="150" cy="85" r="7" fill="#7c9a87"/><circle cx="270" cy="85" r="7" fill="#c65a43"/><circle cx="390" cy="85" r="7" fill="#7c9a87"/><circle cx="570" cy="85" r="7" fill="#c65a43"/>
+    <g transform="translate(0 36)"><rect width="150" height="98" fill="#fffdfa" stroke="#cfc9bf" stroke-width="2"/><text x="20" y="35" fill="#7d8781" font-size="16">01 / INPUT</text><text x="20" y="68" fill="#202a27" font-size="22" font-weight="700">Prompt</text><text x="20" y="93" fill="#202a27" font-size="22" font-weight="700">+ image</text></g>
+    <g transform="translate(150 36)"><rect width="120" height="98" fill="#fffdfa" stroke="#c65a43" stroke-width="2"/><text x="17" y="35" fill="#c65a43" font-size="16">02 / SHAPE</text><text x="17" y="70" fill="#202a27" font-size="24" font-weight="700">Context</text></g>
+    <g transform="translate(270 36)"><rect width="120" height="98" fill="#fffdfa" stroke="#7c9a87" stroke-width="2"/><text x="17" y="35" fill="#5d806c" font-size="16">03 / MAKE</text><text x="17" y="70" fill="#202a27" font-size="24" font-weight="700">Media</text></g>
+    <g transform="translate(390 36)"><rect width="180" height="98" fill="#202a27"/><text x="20" y="35" fill="#b9cdbf" font-size="16">04 / DELIVER</text><text x="20" y="68" fill="#f6f3ed" font-size="22" font-weight="700">Director</text><text x="20" y="93" fill="#f6f3ed" font-size="22" font-weight="700">+ library</text></g>
+  </g>
+</svg>

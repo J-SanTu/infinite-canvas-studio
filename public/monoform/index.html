@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#181817" />
+    <link rel="icon" href="data:," />
+    <title>Santu Director · 白模预演工作台</title>
+    <script type="module" crossorigin src="./assets/index-tvYA_XCr.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BlOrNv2H.css">
+    <style>
+      /* The bundled workspace keeps its DOM contract; Santu supplies the visible branding. */
+      .brand-glyph {
+        width: 96px !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      .brand-glyph img,
+      .owner-watermark img {
+        display: none !important;
+      }
+      .brand-glyph::before,
+      .owner-watermark i::before {
+        content: "";
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #f3f0e8;
+        -webkit-mask: url("./branding/santu.svg") center / contain no-repeat;
+        mask: url("./branding/santu.svg") center / contain no-repeat;
+      }
+      .brand-mark > div,
+      .owner-watermark b {
+        display: none !important;
+      }
+      .owner-watermark {
+        width: 70px;
+        height: 22px;
+        padding: 2px 4px !important;
+      }
+      .owner-watermark i {
+        width: 100% !important;
+        height: 100% !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
