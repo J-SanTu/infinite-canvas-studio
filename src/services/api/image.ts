@@ -244,7 +244,7 @@ function parseImagePayload(payload: ImageApiResponse) {
     return images;
 }
 
-async function normalizeImagesToRequestedSize(images: Array<{ id: string; dataUrl: string }>, requestSize: string | undefined, context?: { config: AiConfig; prompt: string; signal?: AbortSignal; aiSuperResolve?: boolean }) {
+async function normalizeImagesToRequestedSize(images: Array<{ id: string; dataUrl: string }>, requestSize: string | undefined) {
     const target = requestSize ? parseImageDimensions(requestSize) : null;
     if (!target) return images;
     return Promise.all(
@@ -253,51 +253,9 @@ async function normalizeImagesToRequestedSize(images: Array<{ id: string; dataUr
             if (!sourceDataUrl.startsWith("data:image/")) return image;
             const meta = await readImageMeta(sourceDataUrl);
             if (meta.width === target.width && meta.height === target.height) return { ...image, dataUrl: sourceDataUrl };
-            if (context?.aiSuperResolve && context.config.apiFormat !== "gemini") {
-                const superResolved = await requestAiSuperResolution(context.config, sourceDataUrl, target, context.prompt, { signal: context.signal }).catch(() => null);
-                if (superResolved) {
-                    const superDataUrl = await imageToDataUrl({ dataUrl: superResolved.dataUrl }).catch(() => superResolved.dataUrl);
-                    if (superDataUrl.startsWith("data:image/")) {
-                        const superMeta = await readImageMeta(superDataUrl);
-                        if (superMeta.width === target.width && superMeta.height === target.height) return { ...image, dataUrl: superDataUrl };
-                        return { ...image, dataUrl: await resizeDataUrlToExactSize(superDataUrl, { width: target.width, height: target.height, algorithm: "high" }) };
-                    }
-                }
-            }
             return { ...image, dataUrl: await resizeDataUrlToExactSize(sourceDataUrl, { width: target.width, height: target.height, algorithm: "high" }) };
         }),
     );
-}
-
-async function requestAiSuperResolution(config: AiConfig, dataUrl: string, target: { width: number; height: number }, prompt: string, options?: RequestOptions) {
-    const formData = new FormData();
-    formData.set("model", config.model);
-    formData.set(
-        "prompt",
-        withSystemPrompt(
-            config,
-            [
-                "对参考图片进行真正的 AI 高清超分和细节重建。",
-                `输出必须严格为 ${target.width}x${target.height} 像素的 PNG。`,
-                "保持原图主体、构图、产品、人物、材质、文字和场景一致，不要新增无关对象。",
-                "请补足高分辨率细节，避免仅做模糊插值或简单拉伸。",
-                prompt ? `原始生图需求：${prompt}` : "",
-            ]
-                .filter(Boolean)
-                .join("\n"),
-        ),
-    );
-    formData.set("n", "1");
-    formData.set("quality", "high");
-    formData.set("size", `${target.width}x${target.height}`);
-    formData.set("response_format", "b64_json");
-    formData.set("output_format", IMAGE_OUTPUT_FORMAT);
-    formData.append("image", dataUrlToFile({ id: "ai-super-resolution-source", name: "source.png", type: "image/png", dataUrl }));
-    const response = await axios.post<ImageApiResponse>(aiApiUrl(config, "/images/edits"), formData, {
-        headers: { ...aiHeaders(config), ...canvasImageRequestHeaders(config.baseUrl, config.model, "high", "edit", 1) },
-        signal: options?.signal,
-    });
-    return parseImagePayload(response.data)[0] || null;
 }
 
 function readAxiosError(error: unknown, fallback: string) {
@@ -678,9 +636,8 @@ async function requestGeminiImages(config: AiConfig, prompt: string, references:
 
 async function requestGeminiImagesOnce(config: AiConfig, prompt: string, references: ReferenceImage[], options?: RequestOptions) {
     const parts: GeminiPart[] = [{ text: prompt }];
-    for (const image of references) {
-        parts.push(toGeminiImagePart(await imageToDataUrl(image)));
-    }
+    const referenceParts = await Promise.all(references.map(async (image) => toGeminiImagePart(await imageToDataUrl(image))));
+    parts.push(...referenceParts);
     const response = await axios.post<GeminiPayload>(
         geminiApiUrl(config, "generateContent"),
         {
@@ -738,7 +695,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
             },
         );
         const images = parseImagePayload(response.data);
-        return normalizeImagesToRequestedSize(images, requestSize, { config: requestConfig, prompt, signal: options?.signal, aiSuperResolve: true });
+        return normalizeImagesToRequestedSize(images, requestSize);
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));
     }
@@ -780,7 +737,7 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
             signal: options?.signal,
         });
         const images = parseImagePayload(response.data);
-        return normalizeImagesToRequestedSize(images, requestSize, { config: requestConfig, prompt: requestPrompt, signal: options?.signal, aiSuperResolve: true });
+        return normalizeImagesToRequestedSize(images, requestSize);
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));
     }
