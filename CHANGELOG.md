@@ -4,6 +4,9 @@
 
 - Removed the top-bar and camera-monitor watermarks from the Director workspace.
 - Restored Director `Q`, `W`, `E`, and `R` shortcuts across the embedded iframe boundary; `Q` now enters character posing and IK selection mode.
+- Added Blender-style Director view shortcuts: numpad `1` front, `3` right, `7` top, and `9` left.
+- Changed Director character joint markers from low-contrast gold to high-contrast red.
+- Kept selected scene objects compatible with the move and rotate toolbar tools and their `W` / `E` shortcuts.
 
 ## v0.2.0-local
 

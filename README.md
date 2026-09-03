@@ -35,6 +35,8 @@ The embedded Director workspace contains source-level adaptations and compatible
 
 - Building scenes with characters, primitive geometry, props, and imported GLB/GLTF models
 - Posing rigged characters with presets, bone controls, IK handles, and optional reference images
+- Selecting a scene object or joint before using `W` to move or `E` to rotate; `Q` returns to posing/selection mode
+- Blender-style views: numpad `1` front, `3` right, `7` top, and `9` left
 - Managing multiple shots with independent scenes, camera framing, focal lengths, aspect ratios, and thumbnails
 - Animating cameras, characters, and scene objects on a keyframe timeline
 - Exporting camera views as PNG, timeline previews as MP4, and editable projects as JSON
@@ -184,6 +186,8 @@ Santu 无限画布是一套本地优先、单机单用户的 AI 创作桌面工�
 
 - 使用人物、基础几何体、场景道具和导入的 GLB / GLTF 模型快速搭建场景
 - 通过动作预设、骨骼控制点、手脚 IK 和参考图调整人物姿势
+- 点击场景物体或关节点后，按 `W` 移动、按 `E` 旋转；按 `Q` 返回人物摆姿/选择模式
+- Blender 式视图：小键盘 `1` 前视、`3` 右视、`7` 顶视、`9` 左视
 - 管理多个独立镜头，设置摄像机构图、焦距、画幅比例和镜头缩略图
 - 在时间轴上为摄像机、人物和场景物体制作关键帧动画
 - 将摄像机画面导出为 PNG、将时间轴预演导出为 MP4，并用 JSON 工程文件继续编辑

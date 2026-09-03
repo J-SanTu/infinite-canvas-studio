@@ -5,6 +5,7 @@
         KeyE: "旋转",
         KeyR: "缩放",
     };
+    const viewShortcuts = new Set(["Numpad1", "Numpad3", "Numpad7", "Numpad9"]);
 
     function isEditableTarget(target) {
         return target instanceof HTMLElement && (target.matches("input, select, textarea") || target.isContentEditable || Boolean(target.closest('[contenteditable="true"]')));
@@ -25,6 +26,13 @@
         return true;
     }
 
+    function forwardViewShortcut(code) {
+        if (!viewShortcuts.has(code)) return false;
+        const key = code.replace("Numpad", "");
+        window.dispatchEvent(new KeyboardEvent("keydown", { code, key, bubbles: true }));
+        return true;
+    }
+
     window.addEventListener(
         "keydown",
         (event) => {
@@ -38,6 +46,7 @@
         if (event.origin !== window.location.origin || event.source !== window.parent) return;
         const data = event.data;
         if (!data || data.source !== "santu-director-bridge" || data.type !== "shortcut") return;
-        activateShortcut(String(data.code || ""));
+        const code = String(data.code || "");
+        activateShortcut(code) || forwardViewShortcut(code);
     });
 })();

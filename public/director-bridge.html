@@ -228,7 +228,7 @@
                         if (projectJson) post("director:project-snapshot", { projectJson });
                     }
                     if (data.type === "host:shortcut") {
-                        const code = ["KeyQ", "KeyW", "KeyE", "KeyR"].includes(data.code) ? data.code : "";
+                        const code = ["KeyQ", "KeyW", "KeyE", "KeyR", "Numpad1", "Numpad3", "Numpad7", "Numpad9"].includes(data.code) ? data.code : "";
                         if (code) frame.contentWindow?.postMessage({ source: "santu-director-bridge", type: "shortcut", code }, location.origin);
                     }
                 });

@@ -50,10 +50,11 @@ test("Director workspace hides both visual watermarks", async () => {
 
     assert.match(index, /\.topbar\s*\{\s*grid-template-columns: auto 1fr auto !important;/s);
     assert.match(index, /\.brand-mark,\s*\.owner-watermark\s*\{\s*display: none !important;/s);
-    assert.match(index, /<script defer src="\.\/santu-director-fixes\.js"><\/script>/);
+    assert.match(index, /<script defer src="\.\/santu-director-fixes\.js\?v=20260903-view-controls"><\/script>/);
 });
 
-test("Director Q W E R shortcuts work inside the workspace and through the host bridge", async () => {
+test("Director transform and Blender-style view shortcuts cross the host bridge", async () => {
+    const bundle = await readFile(bundleUrl, "utf8");
     const fixes = await readFile(workspaceFixesUrl, "utf8");
     const bridge = await readFile(bridgeUrl, "utf8");
     const workspace = await readFile(workspaceUrl, "utf8");
@@ -63,9 +64,24 @@ test("Director Q W E R shortcuts work inside the workspace and through the host 
     assert.match(fixes, /KeyE: "旋转"/);
     assert.match(fixes, /KeyR: "缩放"/);
     assert.match(fixes, /\.viewport-toolbar button\[aria-label=/);
+    assert.match(fixes, /new Set\(\["Numpad1", "Numpad3", "Numpad7", "Numpad9"\]\)/);
+    assert.match(fixes, /window\.dispatchEvent\(new KeyboardEvent\("keydown", \{ code, key, bubbles: true \}\)\)/);
     assert.match(fixes, /data\.source !== "santu-director-bridge" \|\| data\.type !== "shortcut"/);
     assert.match(bridge, /data\.type === "host:shortcut"/);
-    assert.match(bridge, /\["KeyQ", "KeyW", "KeyE", "KeyR"\]\.includes\(data\.code\)/);
+    assert.match(bridge, /\["KeyQ", "KeyW", "KeyE", "KeyR", "Numpad1", "Numpad3", "Numpad7", "Numpad9"\]\.includes\(data\.code\)/);
     assert.match(workspace, /window\.addEventListener\("keydown", forwardShortcut\)/);
     assert.match(workspace, /postToBridge\("host:shortcut", \{ code \}\)/);
+    assert.match(bundle, /Numpad1/);
+    assert.match(bundle, /Numpad3/);
+    assert.match(bundle, /Numpad7/);
+    assert.match(bundle, /Numpad9/);
+});
+
+test("Director selected joints use high-contrast red markers", async () => {
+    const bundle = await readFile(bundleUrl, "utf8");
+
+    assert.match(bundle, /#ff2d2d/);
+    assert.match(bundle, /#d40f1f/);
+    assert.doesNotMatch(bundle, /#ffd469/);
+    assert.doesNotMatch(bundle, /#bf9948/);
 });

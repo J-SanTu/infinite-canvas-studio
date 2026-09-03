@@ -64,7 +64,7 @@ export function DirectorWorkspace({ nodeId, canvasProjectId, references, onExpor
             const target = event.target;
             if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
             if (target instanceof HTMLElement && (target.matches("input, select, textarea") || target.isContentEditable || Boolean(target.closest('[contenteditable="true"]')))) return;
-            const code = ["KeyQ", "KeyW", "KeyE", "KeyR"].includes(event.code) ? event.code : "";
+            const code = ["KeyQ", "KeyW", "KeyE", "KeyR", "Numpad1", "Numpad3", "Numpad7", "Numpad9"].includes(event.code) ? event.code : "";
             if (!code) return;
             event.preventDefault();
             postToBridge("host:shortcut", { code });
