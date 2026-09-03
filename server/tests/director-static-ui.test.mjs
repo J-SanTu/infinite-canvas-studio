@@ -4,6 +4,8 @@ import test from "node:test";
 
 const bridgeUrl = new URL("../../public/director-bridge.html", import.meta.url);
 const bundleUrl = new URL("../../public/monoform/assets/index-tvYA_XCr.js", import.meta.url);
+const workspaceIndexUrl = new URL("../../public/monoform/index.html", import.meta.url);
+const workspaceFixesUrl = new URL("../../public/monoform/santu-director-fixes.js", import.meta.url);
 const workspaceUrl = new URL("../../src/components/director/director-workspace.tsx", import.meta.url);
 
 test("Director PNG capture returns to canvas without a browser download", async () => {
@@ -41,4 +43,29 @@ test("Director lock icon reflects the current red locked and blue unlocked state
     assert.match(bridge, /path\.setAttribute\("d", nextLocked \? VISUALLY_CLOSED_LOCK_PATH : VISUALLY_OPEN_LOCK_PATH\)/);
     assert.match(bridge, /dataset\.viewLocked = next \? "1" : "0"/);
     assert.match(bridge, /dataset\.viewLocked !== "1" \|\| !isCanvasInput\(event\)/);
+});
+
+test("Director workspace hides both visual watermarks", async () => {
+    const index = await readFile(workspaceIndexUrl, "utf8");
+
+    assert.match(index, /\.topbar\s*\{\s*grid-template-columns: auto 1fr auto !important;/s);
+    assert.match(index, /\.brand-mark,\s*\.owner-watermark\s*\{\s*display: none !important;/s);
+    assert.match(index, /<script defer src="\.\/santu-director-fixes\.js"><\/script>/);
+});
+
+test("Director Q W E R shortcuts work inside the workspace and through the host bridge", async () => {
+    const fixes = await readFile(workspaceFixesUrl, "utf8");
+    const bridge = await readFile(bridgeUrl, "utf8");
+    const workspace = await readFile(workspaceUrl, "utf8");
+
+    assert.match(fixes, /KeyQ: "选择"/);
+    assert.match(fixes, /KeyW: "移动"/);
+    assert.match(fixes, /KeyE: "旋转"/);
+    assert.match(fixes, /KeyR: "缩放"/);
+    assert.match(fixes, /\.viewport-toolbar button\[aria-label=/);
+    assert.match(fixes, /data\.source !== "santu-director-bridge" \|\| data\.type !== "shortcut"/);
+    assert.match(bridge, /data\.type === "host:shortcut"/);
+    assert.match(bridge, /\["KeyQ", "KeyW", "KeyE", "KeyR"\]\.includes\(data\.code\)/);
+    assert.match(workspace, /window\.addEventListener\("keydown", forwardShortcut\)/);
+    assert.match(workspace, /postToBridge\("host:shortcut", \{ code \}\)/);
 });

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Removed the top-bar and camera-monitor watermarks from the Director workspace.
+- Restored Director `Q`, `W`, `E`, and `R` shortcuts across the embedded iframe boundary; `Q` now enters character posing and IK selection mode.
+
 ## v0.2.0-local
 
 - Reworked the product as a single-user local desktop workspace with no login, employee, role, tenant, or administrator flow.

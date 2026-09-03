@@ -227,6 +227,10 @@
                         const projectJson = readSnapshot();
                         if (projectJson) post("director:project-snapshot", { projectJson });
                     }
+                    if (data.type === "host:shortcut") {
+                        const code = ["KeyQ", "KeyW", "KeyE", "KeyR"].includes(data.code) ? data.code : "";
+                        if (code) frame.contentWindow?.postMessage({ source: "santu-director-bridge", type: "shortcut", code }, location.origin);
+                    }
                 });
 
                 window.setInterval(() => {

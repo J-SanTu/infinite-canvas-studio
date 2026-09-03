@@ -59,6 +59,20 @@ export function DirectorWorkspace({ nodeId, canvasProjectId, references, onExpor
         [nodeId],
     );
 
+    useEffect(() => {
+        const forwardShortcut = (event: KeyboardEvent) => {
+            const target = event.target;
+            if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+            if (target instanceof HTMLElement && (target.matches("input, select, textarea") || target.isContentEditable || Boolean(target.closest('[contenteditable="true"]')))) return;
+            const code = ["KeyQ", "KeyW", "KeyE", "KeyR"].includes(event.code) ? event.code : "";
+            if (!code) return;
+            event.preventDefault();
+            postToBridge("host:shortcut", { code });
+        };
+        window.addEventListener("keydown", forwardShortcut);
+        return () => window.removeEventListener("keydown", forwardShortcut);
+    }, [postToBridge]);
+
     const scheduleSave = useCallback((delayMs: number) => {
         if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
         saveTimerRef.current = window.setTimeout(() => {
