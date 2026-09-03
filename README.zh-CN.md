@@ -29,6 +29,24 @@ Santu 无限画布是一套本地优先、单机单用户的 AI 创作桌面工�
 - 导演台：场景、镜头、时间轴以及 PNG / MP4 导出
 - 本地项目列表、素材库、提示词库、导入导出和自动保存
 
+## 导演台
+
+本项目内嵌的导演台包含源自 [MONOFORM 素形白模预演工作台](https://github.com/GuiYi-Xi/monoform-previs-studio) 的源码级适配和兼容资源，主要预演能力包括：
+
+- 使用人物、基础几何体、场景道具和导入的 GLB / GLTF 模型快速搭建场景
+- 通过动作预设、骨骼控制点、手脚 IK 和参考图调整人物姿势
+- 管理多个独立镜头，设置摄像机构图、焦距、画幅比例和镜头缩略图
+- 在时间轴上为摄像机、人物和场景物体制作关键帧动画
+- 将摄像机画面导出为 PNG、将时间轴预演导出为 MP4，并用 JSON 工程文件继续编辑
+
+MONOFORM 原项目资料：
+
+- [观看约 8 分钟的入门操作视频](https://guiyi-xi.github.io/monoform-previs-studio/tutorial/monoform-getting-started.mp4)
+- [查看原版使用说明](https://github.com/GuiYi-Xi/monoform-previs-studio/blob/main/docs/USER_GUIDE.md)
+- [查看功能来源项目](https://github.com/GuiYi-Xi/monoform-previs-studio)
+
+以上要点根据源项目 README 归纳。Santu 内嵌版已针对无限画布、本地保存和截图回传流程进行适配，因此部分界面细节可能与原教程略有不同。
+
 ## 从源码运行
 
 需要 Node.js 24 或更高版本以及 pnpm。

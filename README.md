@@ -29,6 +29,24 @@ Santu Infinite Canvas is a local-first, single-user AI creative desktop workspac
 - Director workspace for scenes, cameras, timelines, and PNG/MP4 exports
 - Local project library, assets, prompt library, import, export, and automatic persistence
 
+## Director workspace
+
+The embedded Director workspace contains source-level adaptations and compatible assets derived from [MONOFORM Previs Studio](https://github.com/GuiYi-Xi/monoform-previs-studio). Its focused previs workflow includes:
+
+- Building scenes with characters, primitive geometry, props, and imported GLB/GLTF models
+- Posing rigged characters with presets, bone controls, IK handles, and optional reference images
+- Managing multiple shots with independent scenes, camera framing, focal lengths, aspect ratios, and thumbnails
+- Animating cameras, characters, and scene objects on a keyframe timeline
+- Exporting camera views as PNG, timeline previews as MP4, and editable projects as JSON
+
+Original MONOFORM resources:
+
+- [Watch the 8-minute getting-started video](https://guiyi-xi.github.io/monoform-previs-studio/tutorial/monoform-getting-started.mp4)
+- [Read the original user guide](https://github.com/GuiYi-Xi/monoform-previs-studio/blob/main/docs/USER_GUIDE.md)
+- [View the source project](https://github.com/GuiYi-Xi/monoform-previs-studio)
+
+The points above are summarized from the upstream README. Santu adapts the embedded workspace for its infinite-canvas, local persistence, and screenshot-return workflow, so some interface details may differ from the original tutorial.
+
 ## Run from source
 
 Requirements: Node.js 24 or later and pnpm.
