@@ -49,10 +49,10 @@ Open `http://127.0.0.1:5200`. The production command runs one Node process and s
 
 ### Install the packaged app
 
-For end users, download the matching Windows or macOS archive from the GitHub Releases page and extract it:
+For end users, use the direct download for your platform:
 
-- Windows: run `Santu Infinite Canvas-0.2.0-x64-setup.exe`, or use the portable executable without installation.
-- macOS Apple Silicon: open the DMG and drag the app to Applications. The app is unsigned; on first launch use Control-click, choose **Open**, and confirm.
+- Windows: [download the Windows ZIP](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.2.0/Santu.Infinite.Canvas-0.2.0-win.zip), extract it, and run `Santu Infinite Canvas.exe`.
+- macOS Apple Silicon: [download the DMG](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.2.0/Santu.Infinite.Canvas-0.2.0-arm64.dmg), open it, and drag the app to Applications. The app is unsigned; on first launch use Control-click, choose **Open**, and confirm.
 
 The packaged apps include their runtime and do not require Node.js, pnpm, or a separate launcher.
 
