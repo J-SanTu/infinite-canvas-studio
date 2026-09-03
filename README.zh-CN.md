@@ -1,6 +1,6 @@
 # Santu 无限画布
 
-[English](./README.md) · **简体中文**
+[EN](./README.md#santu-infinite-canvas) · [中文](./README.md#santu-无限画布)
 
 Santu 无限画布是一套本地优先、单机单用户的 AI 创作桌面工作区。它把提示词、参考素材、生成任务和交付内容连接在同一张可复用画布中，打开后无需注册或登录。
 
