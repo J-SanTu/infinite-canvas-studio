@@ -66,6 +66,9 @@
                 const nodeId = query.get("nodeId") || "";
                 if (!/^[A-Za-z0-9_-]{1,128}$/.test(nodeId)) throw new Error("Invalid director node id");
                 const storageKey = `monoform-project-${nodeId}`;
+                // Older Santu-branded bundles use this key; keep it in sync while the
+                // bridge continues to expose the reference Monoform key.
+                const legacyStorageKey = `santu-director-project-${nodeId}`;
                 const frame = document.getElementById("monoform");
                 let lastSnapshot = "";
                 let loadedProjectFingerprint = "";
@@ -78,8 +81,17 @@
                 }
 
                 function readSnapshot() {
-                    const projectJson = localStorage.getItem(storageKey) || "";
+                    const projectJson = localStorage.getItem(legacyStorageKey) || localStorage.getItem(storageKey) || "";
                     return projectJson.length <= MAX_PROJECT_CHARS ? projectJson : "";
+                }
+
+                function saveCurrentProject() {
+                    const documentRef = frame.contentDocument;
+                    const saveButton = Array.from(documentRef?.querySelectorAll(".top-actions button") || []).find((button) => button.textContent?.trim() === "保存");
+                    saveButton?.click();
+                    const projectJson = readSnapshot();
+                    if (projectJson) localStorage.setItem(storageKey, projectJson);
+                    return projectJson;
                 }
 
                 function exportIdFor(blob) {
@@ -185,7 +197,13 @@
                             post("director:error", { code: "invalid_export", message: "导出文件不符合安全限制" });
                             return;
                         }
-                        post("director:export", { kind, blob, exportId: exportIdFor(blob), width: Number(data.width) || 0, height: Number(data.height) || 0, durationMs: kind === "video" ? readDurationMs() : 0 });
+                        const projectJson = saveCurrentProject();
+                        if (!projectJson) {
+                            post("director:error", { code: "missing_project", message: "导演工程保存失败，请重试" });
+                            return;
+                        }
+                        lastSnapshot = projectJson;
+                        post("director:export", { kind, blob, projectJson, exportId: exportIdFor(blob), width: Number(data.width) || 0, height: Number(data.height) || 0, durationMs: kind === "video" ? readDurationMs() : 0 });
                         return;
                     }
                     if (event.source !== window.parent) return;
@@ -199,6 +217,7 @@
                             loadedProjectFingerprint = projectJson;
                             lastSnapshot = projectJson;
                             localStorage.setItem(storageKey, projectJson);
+                            localStorage.setItem(legacyStorageKey, projectJson);
                             frame.contentWindow.location.reload();
                         } catch {
                             post("director:error", { code: "invalid_project", message: "工程数据无法恢复" });

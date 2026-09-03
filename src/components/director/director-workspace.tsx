@@ -178,6 +178,17 @@ export function DirectorWorkspace({ nodeId, canvasProjectId, references, onExpor
             }
             setExporting(true);
             try {
+                if (typeof data.projectJson !== "string" || !data.projectJson || data.projectJson.length > MAX_PROJECT_CHARS) throw new Error("导演工程快照无效，请重试");
+                if (saveTimerRef.current) {
+                    window.clearTimeout(saveTimerRef.current);
+                    saveTimerRef.current = null;
+                }
+                if (saveInFlightRef.current) await saveInFlightRef.current;
+                if (data.projectJson !== savedSnapshotRef.current) {
+                    await saveDirectorProject(nodeId, data.projectJson, canvasProjectId);
+                    savedSnapshotRef.current = data.projectJson;
+                }
+                pendingSnapshotRef.current = "";
                 const result = await exportDirectorAsset({ nodeId, canvasProjectId, sourceNodeIds: canvasReferences.map((reference) => reference.nodeId), exportId, kind, blob, width: data.width, height: data.height, durationMs: data.durationMs });
                 await onExport?.({ ...result, blob });
                 messageApi.success(kind === "image" ? "PNG 已加入素材库" : "MP4 已加入素材库");
