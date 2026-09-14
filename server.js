@@ -11,6 +11,7 @@ import { createGenerationRun, getGenerationRun, listGenerationRuns, retryGenerat
 import { listModelCatalog } from "./server/lib/model-catalog.js";
 import { localWorkspace } from "./server/lib/local-workspace.js";
 import { createDirectorExport, deleteDirectorProject, getDirectorAssetContent, getDirectorProject, putDirectorProject } from "./server/lib/director-projects.js";
+import { getUiPreferences, updateUiPreferences } from "./server/lib/ui-preferences.js";
 import {
     copyPromptLibraryItem,
     createPromptLibraryFolder,
@@ -45,6 +46,14 @@ const server = createServer(async (req, res) => {
 
         if (req.method === "GET" && url.pathname === "/api/settings/apis") {
             return sendJson(res, 200, { apis: await listLocalApiSettings() });
+        }
+
+        if (req.method === "GET" && url.pathname === "/api/settings/preferences") {
+            return sendJson(res, 200, { preferences: await getUiPreferences() });
+        }
+
+        if (req.method === "PUT" && url.pathname === "/api/settings/preferences") {
+            return sendJson(res, 200, { preferences: await updateUiPreferences(await readJson(req)) });
         }
 
         const apiSettingMatch = url.pathname.match(/^\/api\/settings\/apis\/(image|text|video|audio|music)$/);

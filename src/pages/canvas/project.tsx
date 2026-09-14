@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Clapperboard, Group, Home, ImageIcon, Images, List, Menu, Music2, Plus, Redo2, Settings2, Trash2, Undo2, Upload, Video, X } from "lucide-react";
 import { saveAs } from "file-saver";
 
-import { requestEdit, requestGeneration, requestImageQuestion } from "@/services/api/image";
+import { requestAiSuperResolution, requestEdit, requestGeneration, requestImageQuestion } from "@/services/api/image";
 import { requestAudioGeneration, storeGeneratedAudio } from "@/services/api/audio";
 import { requestVideoGeneration, storeGeneratedVideo } from "@/services/api/video";
 import { defaultConfig, modelMatchesCapability, type AiConfig, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
@@ -1112,6 +1112,8 @@ function InfiniteCanvasPage() {
 
     const handleCanvasMouseDown = useCallback(
         (event: ReactPointerEvent<HTMLDivElement>) => {
+            setToolbarNodeId(null);
+            setHoveredNodeId(null);
             setContextMenu(null);
             setNodeCreatePosition(null);
             setDialogNodeId(null);
@@ -2035,6 +2037,56 @@ function InfiniteCanvasPage() {
         setSelectedNodeIds(new Set([childId]));
         setDialogNodeId(childId);
     }, []);
+
+    const superResolveImageNode = useCallback(
+        async (node: CanvasNodeData) => {
+            if (!node.metadata?.content) return;
+            const generationConfig = { ...buildGenerationConfig(effectiveConfig, node, "image"), count: "1" };
+            if (!isAiConfigReady(generationConfig, generationConfig.model)) {
+                openConfigDialog(true);
+                return;
+            }
+            const meta = await readImageMeta(node.metadata.content);
+            const longEdge = Math.max(meta.width, meta.height);
+            const target = { width: Math.round((meta.width / longEdge) * 8192), height: Math.round((meta.height / longEdge) * 8192) };
+            const childId = nanoid();
+            const prompt = node.metadata.prompt || "";
+            const source = { id: node.id, name: `${node.title || node.id}.png`, type: node.metadata.mimeType || "image/png", dataUrl: node.metadata.content, storageKey: node.metadata.storageKey };
+            const generationMetadata = buildImageGenerationMetadata("edit", { ...generationConfig, size: `${target.width}x${target.height}` }, 1, [source]);
+            setSuperResolveNodeId(null);
+            setRunningNodeId(childId);
+            setNodes((prev) => [
+                ...prev,
+                {
+                    id: childId,
+                    type: CanvasNodeType.Image,
+                    title: "8K 超分结果",
+                    position: { x: node.position.x + node.width + 96, y: node.position.y },
+                    width: fitNodeSize(target.width, target.height).width,
+                    height: fitNodeSize(target.width, target.height).height,
+                    metadata: { prompt, status: NODE_STATUS_LOADING, ...generationMetadata },
+                },
+            ]);
+            setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: node.id, toNodeId: childId }]);
+            setSelectedNodeIds(new Set([childId]));
+            const controller = startGenerationRequest(childId, node.id, childId);
+            try {
+                const image = await requestAiSuperResolution(generationConfig, node.metadata.content, target, prompt, { signal: controller.signal });
+                const uploaded = await uploadImage(image.dataUrl);
+                const size = fitNodeSize(uploaded.width, uploaded.height);
+                setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, width: size.width, height: size.height, metadata: { ...item.metadata, ...imageMetadata(uploaded), prompt, ...generationMetadata } } : item)));
+            } catch (error) {
+                if (isGenerationCanceled(error)) return;
+                const errorDetails = error instanceof Error ? error.message : "AI 超分失败";
+                message.error(errorDetails);
+                setNodes((prev) => prev.map((item) => (item.id === childId ? { ...item, metadata: { ...item.metadata, status: NODE_STATUS_ERROR, errorDetails } } : item)));
+            } finally {
+                finishGenerationRequest(childId, controller);
+                setRunningNodeId(null);
+            }
+        },
+        [effectiveConfig, finishGenerationRequest, isAiConfigReady, message, openConfigDialog, startGenerationRequest],
+    );
 
     const generateAngleNode = useCallback(
         async (node: CanvasNodeData, params: CanvasImageAngleParams) => {
@@ -3166,7 +3218,12 @@ function InfiniteCanvasPage() {
                 ) : null}
 
                 <Modal title="AI 超分" open={Boolean(superResolveNode?.metadata?.content)} centered footer={null} onCancel={() => setSuperResolveNodeId(null)}>
-                    <div className="py-8 text-center text-base font-medium">暂未实现</div>
+                    <div className="space-y-4 py-3">
+                        <div className="text-sm opacity-70">AI 增强细节后等比放大，输出长边 8192 像素 PNG。接口返回比例不同时补白边，保留完整画面。</div>
+                        <Button type="primary" block onClick={() => superResolveNode && void superResolveImageNode(superResolveNode)}>
+                            开始 8K 超分
+                        </Button>
+                    </div>
                 </Modal>
 
                 {angleNode?.metadata?.content ? <CanvasNodeAngleDialog dataUrl={angleNode.metadata.content} open={Boolean(angleNode)} onClose={() => setAngleNodeId(null)} onConfirm={(params) => void generateAngleNode(angleNode!, params)} /> : null}

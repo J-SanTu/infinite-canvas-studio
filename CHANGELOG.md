@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.1 - 2026-09-14
+
++ [修复] 指定尺寸输出完整保留画面，比例不符时补白边，不再居中裁切。
++ [新增] AI 细节增强后等比输出长边 8192 像素 PNG，普通插值放大也支持 8K。
++ [修复] 点击画布空白处关闭图片二次编辑工具栏。
++ [修复] 快捷工具文字默认隐藏，保存的设置写入本地数据库并在重启后恢复。
+
 ## Unreleased
 
 - Removed the top-bar and camera-monitor watermarks from the Director workspace.

@@ -9,6 +9,7 @@ import { useThemeStore } from "@/stores/use-theme-store";
 import { CanvasNodeType, type CanvasNodeData, type ViewportTransform } from "@/types/canvas";
 import { ImageToolSettingsModal, type ImageToolbarSettingsTool } from "./canvas-image-toolbar-settings-modal";
 import { IMAGE_QUICK_TOOLS_STORAGE_KEY, buildImageToolbarTools, defaultImageQuickToolIds, readImageQuickToolsConfig, type ImageQuickToolId } from "./canvas-image-toolbar-tools";
+import { fetchUiPreferences, saveUiPreferences } from "@/services/ui-preferences";
 
 type CanvasNodeHoverToolbarProps = {
     node: CanvasNodeData | null;
@@ -79,24 +80,36 @@ export function CanvasNodeHoverToolbar({
 }: CanvasNodeHoverToolbarProps) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const [quickImageToolIds, setQuickImageToolIds] = useState<ImageQuickToolId[]>(defaultImageQuickToolIds);
-    const [showImageToolLabels, setShowImageToolLabels] = useState(true);
+    const [showImageToolLabels, setShowImageToolLabels] = useState(false);
     const [draftImageToolIds, setDraftImageToolIds] = useState<ImageQuickToolId[]>(defaultImageQuickToolIds);
-    const [draftShowImageToolLabels, setDraftShowImageToolLabels] = useState(true);
+    const [draftShowImageToolLabels, setDraftShowImageToolLabels] = useState(false);
     const [imageToolSettingsOpen, setImageToolSettingsOpen] = useState(false);
     const { message } = App.useApp();
     const copyText = useCopyText();
 
     useEffect(() => {
+        let active = true;
         try {
             const stored = window.localStorage.getItem(IMAGE_QUICK_TOOLS_STORAGE_KEY);
-            if (!stored) return;
-            const parsed = JSON.parse(stored) as unknown;
-            const config = readImageQuickToolsConfig(parsed);
-            setQuickImageToolIds(config.ids);
-            setShowImageToolLabels(config.showLabels);
+            if (stored) {
+                const config = readImageQuickToolsConfig(JSON.parse(stored) as unknown);
+                setQuickImageToolIds(config.ids);
+                setShowImageToolLabels(config.showLabels);
+            }
         } catch {
             window.localStorage.removeItem(IMAGE_QUICK_TOOLS_STORAGE_KEY);
         }
+        void fetchUiPreferences()
+            .then((preferences) => {
+                if (!active || !preferences.imageToolbar) return;
+                const config = readImageQuickToolsConfig(preferences.imageToolbar);
+                setQuickImageToolIds(config.ids);
+                setShowImageToolLabels(config.showLabels);
+            })
+            .catch(() => undefined);
+        return () => {
+            active = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -173,11 +186,17 @@ export function CanvasNodeHoverToolbar({
         });
     };
 
-    const saveImageToolSettings = () => {
+    const saveImageToolSettings = async () => {
         const config = { ids: draftImageToolIds, showLabels: draftShowImageToolLabels };
+        try {
+            await saveUiPreferences({ imageToolbar: config });
+        } catch (error) {
+            message.error(error instanceof Error ? error.message : "保存失败，请重试");
+            return;
+        }
         setQuickImageToolIds(config.ids);
         setShowImageToolLabels(config.showLabels);
-        window.localStorage.setItem(IMAGE_QUICK_TOOLS_STORAGE_KEY, JSON.stringify(config));
+        try { window.localStorage.setItem(IMAGE_QUICK_TOOLS_STORAGE_KEY, JSON.stringify(config)); } catch { /* The durable server copy is already saved. */ }
         closeImageToolSettings();
     };
 

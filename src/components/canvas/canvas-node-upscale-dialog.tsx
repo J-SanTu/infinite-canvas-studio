@@ -16,7 +16,8 @@ const algorithms: Array<{ value: ImageUpscaleAlgorithm; title: string; descripti
 const targetOptions = [
     { label: "1K", value: 1024 },
     { label: "2K", value: 2048 },
-    { label: "4K", value: MAX_UPSCALE_LONG_EDGE },
+    { label: "4K", value: 4096 },
+    { label: "8K", value: 8192 },
 ];
 
 const defaultParams: CanvasImageUpscaleParams = {
@@ -74,7 +75,7 @@ export function CanvasNodeUpscaleDialog({ dataUrl, open, onClose, onConfirm }: {
                                 options={targetOptions.map((option) => ({ label: `${option.label} · ${option.value}px`, value: option.value, disabled: Boolean(image && sourceLongEdge >= option.value) }))}
                                 onChange={(value) => setParams((current) => ({ ...current, targetLongEdge: Number(value) }))}
                             />
-                            {image && !canUpscale ? <div className="text-xs font-medium text-[#ef4444]">{reachedMax ? "图片已达到 4K，无需放大" : "图片已达到当前目标像素，无需放大"}</div> : null}
+                            {image && !canUpscale ? <div className="text-xs font-medium text-[#ef4444]">{reachedMax ? "图片已达到 8K，无需放大" : "图片已达到当前目标像素，无需放大"}</div> : null}
                         </div>
                         <div className="space-y-2">
                             <div className="font-medium opacity-75">放大算法</div>

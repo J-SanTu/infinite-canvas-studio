@@ -71,6 +71,7 @@ function normalizeDb(source) {
         assetLibraryChanges: localizeRows(source.assetLibraryChanges),
         modelCatalog: Array.isArray(source.modelCatalog) ? source.modelCatalog : [],
         directorProjects: localizeRows(source.directorProjects),
+        uiPreferences: source.uiPreferences && typeof source.uiPreferences === "object" ? source.uiPreferences : {},
         apiConfigs: source.apiConfigs && typeof source.apiConfigs === "object" ? source.apiConfigs : migrateLegacyApiConfigs(source.backendApi || legacyTenantConfigs[0] || null, legacyUsers),
     };
 }

@@ -743,6 +743,46 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
     }
 }
 
+export async function requestAiSuperResolution(config: AiConfig, dataUrl: string, target: { width: number; height: number }, prompt?: string, options?: RequestOptions) {
+    const requestConfig = resolveModelRequestConfig(config, config.model || config.imageModel);
+    if (requestConfig.apiFormat === "gemini") throw new Error("Gemini 暂不支持 AI 超分，请切换到 OpenAI 兼容图片模型");
+    const width = Math.max(1, Math.round(target.width));
+    const height = Math.max(1, Math.round(target.height));
+    const sourceData = await imageToDataUrl({ dataUrl });
+    const formData = new FormData();
+    formData.set("model", requestConfig.model);
+    formData.set(
+        "prompt",
+        withSystemPrompt(
+            requestConfig,
+            `对输入图片进行 AI 超分辨率重建，输出严格为 ${width}x${height} 像素 PNG。保持原图宽高比、主体、构图、文字、材质、光线和颜色，不新增或删除内容，只补足真实细节。${prompt?.trim() || ""}`,
+        ),
+    );
+    formData.set("n", "1");
+    formData.set("quality", "high");
+    // The image API has a smaller pixel budget than the final 8K export.
+    // Reconstruct details at supported resolution, then fit the complete result.
+    const ratio = width / height;
+    formData.set("size", ratio >= 1 / 3 && ratio <= 3 ? resolveSize("high", `${width}:${height}`) : "auto");
+    formData.set("response_format", "b64_json");
+    formData.set("output_format", IMAGE_OUTPUT_FORMAT);
+    formData.append("image", dataUrlToFile({ id: "super-resolution-source", name: "source.png", type: "image/png", dataUrl: sourceData }));
+
+    try {
+        const response = await axios.post<ImageApiResponse>(aiApiUrl(requestConfig, "/images/edits"), formData, {
+            headers: { ...aiHeaders(requestConfig), ...canvasImageRequestHeaders(requestConfig.baseUrl, requestConfig.model, "high", "edit", 1) },
+            signal: options?.signal,
+        });
+        const image = parseImagePayload(response.data)[0];
+        const sourceDataUrl = await imageToDataUrl({ dataUrl: image.dataUrl }).catch(() => image.dataUrl);
+        const meta = await readImageMeta(sourceDataUrl);
+        const normalized = meta.width === width && meta.height === height ? sourceDataUrl : await resizeDataUrlToExactSize(sourceDataUrl, { width, height, algorithm: "high" });
+        return { ...image, dataUrl: normalized, width, height };
+    } catch (error) {
+        throw new Error(readAxiosError(error, "AI 超分失败"));
+    }
+}
+
 export async function requestImageQuestion(config: AiConfig, messages: AiTextMessage[], onDelta: (text: string) => void, options?: RequestOptions) {
     const requestConfig = resolveModelRequestConfig(config, config.model || config.textModel);
     try {
