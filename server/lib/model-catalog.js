@@ -2,6 +2,8 @@ import { readDb } from "./store.js";
 
 const DEFAULT_CATALOG = [
     { id: "gpt-image-2", label: "GPT Image 2", capability: "image", supportsReferences: true, tags: ["默认", "图片"] },
+    { id: "gpt-image-2.5-flare", label: "GPT Image 2.5 Flare", capability: "image", supportsReferences: true, tags: ["图片", "2.5"] },
+    { id: "gpt-image-2.5-sunburst", label: "GPT Image 2.5 Sunburst", capability: "image", supportsReferences: true, tags: ["图片", "2.5"] },
     { id: "grok-imagine-video", label: "Grok Imagine Video", capability: "video", supportsReferences: true, tags: ["视频"] },
     { id: "gpt-5.5", label: "GPT 5.5", capability: "text", supportsReferences: false, tags: ["文本"] },
     { id: "gpt-4o-mini-tts", label: "GPT 4o Mini TTS", capability: "audio", supportsReferences: false, tags: ["音频"] },

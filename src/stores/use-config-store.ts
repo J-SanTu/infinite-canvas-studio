@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
-import { APP_API_PROXY_PREFIX, APP_AUDIO_MODEL, APP_BASE_URL, APP_DEFAULT_MODELS, APP_IMAGE_MODEL, APP_TEXT_MODEL, APP_VIDEO_MODEL } from "@/config/app-config";
+import { APP_API_PROXY_PREFIX, APP_AUDIO_MODEL, APP_BASE_URL, APP_DEFAULT_MODELS, APP_IMAGE_MODELS, APP_IMAGE_MODEL, APP_TEXT_MODEL, APP_VIDEO_MODEL } from "@/config/app-config";
 
 export type ApiCallFormat = "openai" | "gemini";
 
@@ -87,7 +87,7 @@ export const defaultConfig: AiConfig = {
     videoWatermark: "false",
     systemPrompt: "",
     models: APP_DEFAULT_MODELS.map((model) => `${BACKEND_API_CHANNEL_ID}::${model}`),
-    imageModels: [`${BACKEND_API_CHANNEL_ID}::${APP_IMAGE_MODEL}`],
+    imageModels: APP_IMAGE_MODELS.map((model) => `${BACKEND_API_CHANNEL_ID}::${model}`),
     videoModels: [`${BACKEND_API_CHANNEL_ID}::${APP_VIDEO_MODEL}`],
     textModels: [`${BACKEND_API_CHANNEL_ID}::${APP_TEXT_MODEL}`],
     audioModels: [`${BACKEND_API_CHANNEL_ID}::${APP_AUDIO_MODEL}`],

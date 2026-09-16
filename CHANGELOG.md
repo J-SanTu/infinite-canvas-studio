@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.2 - 2026-09-16
+
+- Add GPT Image 2.5 Flare and Sunburst to the image model defaults and backend catalog, using the existing image API.
+- Align image size processing with the 1.0 workspace implementation.
+- Include the existing 8K export and persisted toolbar preferences.
+- Rebuild macOS ARM64 and Windows x64 desktop distributions from the same source.
+
 ## v0.2.1 - 2026-09-14
 
 + [修复] 指定尺寸输出完整保留画面，比例不符时补白边，不再居中裁切。

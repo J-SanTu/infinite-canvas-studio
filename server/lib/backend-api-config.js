@@ -10,7 +10,7 @@ const secretPath = process.env.CANVAS_SECRET_PATH ? resolve(process.env.CANVAS_S
 export const DEFAULT_BASE_URL = "https://api.example.com";
 const CAPABILITIES = new Set(["image", "text", "video", "audio", "music"]);
 const DEFAULTS = {
-    image: { name: "图片 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["gpt-image-2", "gpt-5.5"] },
+    image: { name: "图片 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "gpt-5.5"] },
     text: { name: "文本 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["gpt-5.5"] },
     video: { name: "视频 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["grok-imagine-video"] },
     audio: { name: "音频 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["gpt-4o-mini-tts"] },

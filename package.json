@@ -1,6 +1,6 @@
 {
     "name": "santu-infinite-canvas",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "description": "Local-first single-user AI creation workspace with an infinite canvas.",
     "author": "Santu Infinite Canvas contributors",
     "private": true,
