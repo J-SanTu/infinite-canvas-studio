@@ -247,23 +247,24 @@ function parseImagePayload(payload: ImageApiResponse) {
 async function normalizeImagesToRequestedSize(images: Array<{ id: string; dataUrl: string }>, requestSize: string | undefined, context?: { config: AiConfig; prompt: string; signal?: AbortSignal; aiSuperResolve?: boolean }) {
     const target = requestSize ? parseImageDimensions(requestSize) : null;
     if (!target) return images;
+    // API dimensions may be rounded to multiples of 16; final output follows the selected ratio exactly.
+    const selected = context?.config.size;
+    if (selected?.includes(":")) {
+        const ratio = parseRatioValue(selected);
+        let w = Math.round(ratio.width * 10000), h = Math.round(ratio.height * 10000);
+        let a = w, b = h;
+        while (b) { const rest = a % b; a = b; b = rest; }
+        w /= a; h /= a;
+        const multiple = Math.max(1, Math.floor(Math.max(target.width, target.height) / Math.max(w, h)));
+        target.width = w * multiple;
+        target.height = h * multiple;
+    }
     return Promise.all(
         images.map(async (image) => {
-            const sourceDataUrl = await imageToDataUrl({ dataUrl: image.dataUrl }).catch(() => image.dataUrl);
-            if (!sourceDataUrl.startsWith("data:image/")) return image;
+            const sourceDataUrl = await imageToDataUrl({ dataUrl: image.dataUrl });
+            if (!sourceDataUrl.startsWith("data:image/")) throw new Error("无法读取返回图片以验证输出比例，请重试");
             const meta = await readImageMeta(sourceDataUrl);
             if (meta.width === target.width && meta.height === target.height) return { ...image, dataUrl: sourceDataUrl };
-            if (context?.aiSuperResolve && context.config.apiFormat !== "gemini") {
-                const superResolved = await requestOutputSizeSuperResolution(context.config, sourceDataUrl, target, context.prompt, { signal: context.signal }).catch(() => null);
-                if (superResolved) {
-                    const superDataUrl = await imageToDataUrl({ dataUrl: superResolved.dataUrl }).catch(() => superResolved.dataUrl);
-                    if (superDataUrl.startsWith("data:image/")) {
-                        const superMeta = await readImageMeta(superDataUrl);
-                        if (superMeta.width === target.width && superMeta.height === target.height) return { ...image, dataUrl: superDataUrl };
-                        return { ...image, dataUrl: await resizeDataUrlToExactSize(superDataUrl, { width: target.width, height: target.height, algorithm: "high" }) };
-                    }
-                }
-            }
             return { ...image, dataUrl: await resizeDataUrlToExactSize(sourceDataUrl, { width: target.width, height: target.height, algorithm: "high" }) };
         }),
     );
@@ -688,7 +689,7 @@ async function requestGeminiImagesOnce(config: AiConfig, prompt: string, referen
         },
         { headers: { ...geminiHeaders(config), ...canvasImageRequestHeaders(config.baseUrl, config.model, config.quality, references.length ? "edit" : "generation", 1) }, signal: options?.signal },
     );
-    return normalizeImagesToRequestedSize(parseGeminiImagePayload(response.data), config.size);
+    return normalizeImagesToRequestedSize(parseGeminiImagePayload(response.data), resolveRequestSize(normalizeQuality(config.quality), config.size), { config, prompt });
 }
 
 function parseGeminiImagePayload(payload: GeminiPayload) {
@@ -724,7 +725,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
             aiApiUrl(requestConfig, "/images/generations"),
             {
                 model: requestConfig.model,
-                prompt: withSystemPrompt(requestConfig, prompt),
+                prompt: withSystemPrompt(requestConfig, `${prompt}\n最终画布比例以界面选择的 ${config.size} 为准，优先于文案中的冲突尺寸。所有文字和主体必须完整位于画面内，禁止裁切。`),
                 n,
                 ...(quality ? { quality } : {}),
                 ...(requestSize ? { size: requestSize } : {}),
@@ -759,7 +760,7 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
     const requestSize = resolveRequestSize(quality, config.size);
     const formData = new FormData();
     formData.set("model", requestConfig.model);
-    formData.set("prompt", withSystemPrompt(requestConfig, requestPrompt));
+    formData.set("prompt", withSystemPrompt(requestConfig, `${requestPrompt}\n最终画布比例以界面选择的 ${config.size} 为准，优先于文案中的冲突尺寸。重新排版以完整保留内容，禁止裁切文字和主体。`));
     formData.set("n", String(n));
     formData.set("response_format", "b64_json");
     formData.set("output_format", IMAGE_OUTPUT_FORMAT);

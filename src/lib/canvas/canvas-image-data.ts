@@ -154,7 +154,7 @@ export async function resizeDataUrlToExactSize(dataUrl: string, params: ImageExa
     const image = await loadImage(dataUrl);
     const width = Math.max(1, Math.round(params.width));
     const height = Math.max(1, Math.round(params.height));
-    return drawCoverResize(image, width, height, params.algorithm || "high");
+    return drawContainResize(image, width, height, params.algorithm || "high");
 }
 
 export async function outpaintDataUrl(dataUrl: string, params: ImageOutpaintParams): Promise<ImageOutpaintResult> {
@@ -290,30 +290,20 @@ function drawResize(source: CanvasImageSource, sourceWidth: number, sourceHeight
     return drawResizeCanvas(source, sourceWidth, sourceHeight, width, height, algorithm).toDataURL("image/png");
 }
 
-function drawCoverResize(image: HTMLImageElement, width: number, height: number, algorithm: ImageUpscaleAlgorithm) {
-    const sourceRatio = image.width / Math.max(1, image.height);
-    const targetRatio = width / Math.max(1, height);
-    let sx = 0;
-    let sy = 0;
-    let sourceWidth = image.width;
-    let sourceHeight = image.height;
-
-    if (sourceRatio > targetRatio) {
-        sourceWidth = Math.max(1, Math.round(image.height * targetRatio));
-        sx = Math.max(0, Math.round((image.width - sourceWidth) / 2));
-    } else if (sourceRatio < targetRatio) {
-        sourceHeight = Math.max(1, Math.round(image.width / targetRatio));
-        sy = Math.max(0, Math.round((image.height - sourceHeight) / 2));
-    }
-
+function drawContainResize(image: HTMLImageElement, width: number, height: number, algorithm: ImageUpscaleAlgorithm) {
+    const scale = Math.min(width / image.width, height / image.height);
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
-    if (!context) return canvas.toDataURL("image/png");
+    if (!context) throw new Error("无法创建图片画布");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
     context.imageSmoothingEnabled = algorithm !== "nearest";
     context.imageSmoothingQuality = algorithm === "bilinear" ? "medium" : "high";
-    context.drawImage(image, sx, sy, sourceWidth, sourceHeight, 0, 0, width, height);
+    context.drawImage(image, 0, 0, image.width, image.height, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
     return canvas.toDataURL("image/png");
 }
 
