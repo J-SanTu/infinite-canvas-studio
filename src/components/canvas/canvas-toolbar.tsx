@@ -51,6 +51,7 @@ export function CanvasToolbar({
     onAddText,
     onAddConfig,
     onAddGroup,
+    onAddCreative,
     onAddDirector,
     onUndo,
     onRedo,
@@ -76,6 +77,7 @@ export function CanvasToolbar({
     onAddText: () => void;
     onAddConfig: () => void;
     onAddGroup: () => void;
+    onAddCreative: () => void;
     onAddDirector: () => void;
     onUndo: () => void;
     onRedo: () => void;
@@ -156,6 +158,7 @@ export function CanvasToolbar({
                 <ToolbarButton id="tool-group" label="组" hovered={hovered} hoverStyle={hoverStyle} wrapRef={wrapRef} onTipX={setTipX} onHover={setHovered} onClick={onAddGroup}>
                     <Group className="size-4.5" />
                 </ToolbarButton>
+                <button onClick={onAddCreative} className="px-2 text-xs">创意策划</button>
                 <ToolbarButton id="tool-director" label="导演台" hovered={hovered} hoverStyle={hoverStyle} wrapRef={wrapRef} onTipX={setTipX} onHover={setHovered} onClick={onAddDirector}>
                     <Clapperboard className="size-4.5" />
                 </ToolbarButton>

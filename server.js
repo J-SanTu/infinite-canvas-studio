@@ -1,3 +1,4 @@
+import { readProductPage } from "./server/lib/creative-product-page.js";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
@@ -39,6 +40,10 @@ const server = createServer(async (req, res) => {
         }
 
         const user = localWorkspace;
+        if (req.method === "GET" && url.pathname === "/api/creative/product-page") {
+            try { return sendJson(res, 200, await readProductPage(url.searchParams.get("url") || "")); }
+            catch (error) { return sendJson(res, 400, { error: error.message }); }
+        }
 
         if (req.method === "GET" && url.pathname === "/api/workspace") {
             return sendJson(res, 200, { workspace: user });

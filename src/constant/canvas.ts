@@ -9,6 +9,7 @@ type CanvasNodeSpec = {
 };
 
 export const NODE_DEFAULT_SIZE = {
+    [CanvasNodeType.Creative]: { width: 560, height: 800, title: "创意策划" },
     [CanvasNodeType.Image]: { width: 340, height: 240, title: "图片" },
     [CanvasNodeType.Text]: { width: 340, height: 240, title: "文本" },
     [CanvasNodeType.Config]: { width: 340, height: 240, title: "生成配置" },
@@ -19,6 +20,7 @@ export const NODE_DEFAULT_SIZE = {
 } satisfies Record<CanvasNodeType, { width: number; height: number; title: string }>;
 
 export const NODE_SPECS = {
+    [CanvasNodeType.Creative]: { ...NODE_DEFAULT_SIZE[CanvasNodeType.Creative], metadata: { status: "idle" } },
     [CanvasNodeType.Image]: {
         ...NODE_DEFAULT_SIZE[CanvasNodeType.Image],
         metadata: { content: "", status: "idle" },

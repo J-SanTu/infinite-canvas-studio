@@ -10,6 +10,7 @@ export type ViewportTransform = {
 };
 
 export enum CanvasNodeType {
+    Creative = "creative",
     Image = "image",
     Text = "text",
     Config = "config",
@@ -24,6 +25,8 @@ export type CanvasGenerationMode = "text" | "image" | "video" | "audio";
 export type CanvasImageGenerationType = "generation" | "edit";
 
 export type CanvasNodeMetadata = {
+    creativeRatioApproval?: string;
+    creative?: { requirements: string; url: string; ratio: string; description: string; copies: {role: string; text: string}[]; roles: Record<string, string>; generatedInput?: string };
     content?: string;
     composerContent?: string;
     prompt?: string;

@@ -43,7 +43,7 @@ export function buildNodeGenerationContext(nodeId: string, nodes: CanvasNodeData
     const referenceAudios = inputs.map((input) => input.audio).filter((audio): audio is ReferenceAudio => Boolean(audio));
 
     return {
-        prompt: upstreamText ? `${prompt}\n\n${upstreamText}` : prompt,
+        prompt: inputs.some(input => nodes.find(n=>n.id===input.nodeId)?.type===CanvasNodeType.Creative) ? upstreamText : upstreamText ? `${prompt}\n\n${upstreamText}` : prompt,
         referenceImages,
         referenceVideos,
         referenceAudios,
@@ -114,7 +114,9 @@ function buildComposerGenerationContext(inputs: NodeGenerationInput[], prompt: s
 }
 
 export function buildNodeGenerationInputs(nodeId: string, nodes: CanvasNodeData[], connections: CanvasConnection[]): NodeGenerationInput[] {
-    return getGenerationResourceNodes(nodeId, nodes, connections).flatMap((node): NodeGenerationInput[] => {
+    const direct = getGenerationResourceNodes(nodeId, nodes, connections);
+    const inherited = direct.filter(n => n.type === CanvasNodeType.Creative).flatMap(n => getGenerationResourceNodes(n.id, nodes, connections).filter(x => x.type === CanvasNodeType.Image));
+    return [...new Map([...direct, ...inherited].map(n => [n.id, n])).values()].flatMap((node): NodeGenerationInput[] => {
         const image = readReferenceImage(node);
         if (image) return [{ nodeId: node.id, type: "image" as const, title: node.title, image }];
         const video = readReferenceVideo(node);

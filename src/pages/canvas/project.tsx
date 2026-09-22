@@ -1,9 +1,11 @@
+import { creativeSources, chooseCreativeRatio } from "@/lib/canvas/creative-plan";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent as ReactChangeEvent, DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Clapperboard, Group, Home, ImageIcon, Images, List, Menu, Music2, Plus, Redo2, Settings2, Trash2, Undo2, Upload, Video, X } from "lucide-react";
 import { saveAs } from "file-saver";
 
+import { CreativePanel } from "@/components/canvas/creative-panel";
 import { requestAiSuperResolution, requestEdit, requestGeneration, requestImageQuestion } from "@/services/api/image";
 import { requestAudioGeneration, storeGeneratedAudio } from "@/services/api/audio";
 import { requestVideoGeneration, storeGeneratedVideo } from "@/services/api/video";
@@ -186,7 +188,7 @@ function ConnectionCreateMenu({
     onClose,
 }: {
     pending: PendingConnectionCreate;
-    onCreate: (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio | CanvasNodeType.Director) => void;
+    onCreate: (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio | CanvasNodeType.Director | CanvasNodeType.Creative) => void;
     onClose: () => void;
 }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
@@ -211,6 +213,7 @@ function ConnectionCreateMenu({
                 <ConnectionCreateOption theme={theme} icon={<ImageIcon className="size-5" />} title="图片生成" onClick={() => onCreate(CanvasNodeType.Image)} />
                 <ConnectionCreateOption theme={theme} icon={<Video className="size-5" />} title="视频生成" onClick={() => onCreate(CanvasNodeType.Video)} />
                 <ConnectionCreateOption theme={theme} icon={<Music2 className="size-5" />} title="音频参考" onClick={() => onCreate(CanvasNodeType.Audio)} />
+                <ConnectionCreateOption theme={theme} icon={<Clapperboard className="size-5" />} title="创意策划" description="图片方案、文案与提示词" onClick={() => onCreate(CanvasNodeType.Creative)} />
                 <ConnectionCreateOption theme={theme} icon={<Clapperboard className="size-5" />} title="导演台" description="构图、镜头与动作预演" onClick={() => onCreate(CanvasNodeType.Director)} />
                 <ConnectionCreateOption theme={theme} icon={<Settings2 className="size-5" />} title="配置节点" description="模型、尺寸、数量和输入顺序" onClick={() => onCreate(CanvasNodeType.Config)} />
             </div>
@@ -266,6 +269,7 @@ function NodeCreateMenu({ position, onCreate, onClose }: { position: Position; o
                 <ConnectionCreateOption theme={theme} icon={<Video className="size-5" />} title="视频" onClick={() => onCreate(CanvasNodeType.Video)} />
                 <ConnectionCreateOption theme={theme} icon={<Music2 className="size-5" />} title="音频" onClick={() => onCreate(CanvasNodeType.Audio)} />
                 <ConnectionCreateOption theme={theme} icon={<Settings2 className="size-5" />} title="生成配置" onClick={() => onCreate(CanvasNodeType.Config)} />
+                <ConnectionCreateOption theme={theme} icon={<Clapperboard className="size-5" />} title="创意策划" description="图片方案、文案与提示词" onClick={() => onCreate(CanvasNodeType.Creative)} />
                 <ConnectionCreateOption theme={theme} icon={<Clapperboard className="size-5" />} title="导演台" description="构图、镜头与动作预演" onClick={() => onCreate(CanvasNodeType.Director)} />
                 <ConnectionCreateOption theme={theme} icon={<Group className="size-5" />} title="组" onClick={() => onCreate(CanvasNodeType.Group)} />
             </div>
@@ -612,6 +616,11 @@ function InfiniteCanvasPage() {
                 return;
             }
             const { fromNodeId, toNodeId } = connection;
+            const creative = nodesRef.current.find(n => n.id === fromNodeId && n.type === CanvasNodeType.Creative);
+            const target = nodesRef.current.find(n => n.id === toNodeId);
+            if (creative && target?.type !== CanvasNodeType.Image) { window.alert("创意策划仅连接图片节点"); return; }
+            if (creative) setNodes(prev => prev.map(n => n.id === toNodeId ? {...n,metadata:{...n.metadata,size:creative.metadata?.creative?.ratio || "16:9"}} : n));
+
             const exists = connectionsRef.current.some((conn) => conn.fromNodeId === fromNodeId && conn.toNodeId === toNodeId);
             if (!exists) {
                 setConnections((prev) => [...prev, { id: `conn-${Date.now()}`, fromNodeId, toNodeId }]);
@@ -622,7 +631,7 @@ function InfiniteCanvasPage() {
     );
 
     const createConnectedNode = useCallback(
-        (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio | CanvasNodeType.Director, pending: PendingConnectionCreate) => {
+        (type: CanvasNodeType.Image | CanvasNodeType.Text | CanvasNodeType.Config | CanvasNodeType.Video | CanvasNodeType.Audio | CanvasNodeType.Director | CanvasNodeType.Creative, pending: PendingConnectionCreate) => {
             const metadata = type === CanvasNodeType.Config ? { model: effectiveConfig.imageModel || effectiveConfig.model, size: effectiveConfig.size, count: getGenerationCount(effectiveConfig.canvasImageCount || effectiveConfig.count) } : undefined;
             const newNode = createCanvasNode(type, pending.position, metadata);
             const connection = normalizeConnection(pending.connection.nodeId, newNode.id, [...nodesRef.current, newNode], pending.connection.handleType);
@@ -1731,7 +1740,16 @@ function InfiniteCanvasPage() {
         setNodes((prev) => prev.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, prompt } } : node)));
     }, []);
 
-    const handleConfigNodeChange = useCallback((nodeId: string, patch: Partial<CanvasNodeData["metadata"]>) => {
+    const handleConfigNodeChange = useCallback(async (nodeId: string, patch: Partial<CanvasNodeData["metadata"]>) => {
+        const plans=creativeSources(nodeId,nodesRef.current,connectionsRef.current);
+        if(patch?.size && plans.length) {
+            const ratio=plans[0].metadata?.creative?.ratio;
+            if(ratio && patch.size!==ratio) {
+                const choice=await chooseCreativeRatio(ratio,patch.size);
+                if(!choice)return;
+                patch={...patch,size:choice==='plan'?ratio:patch.size,creativeRatioApproval:choice==='downstream'?`${ratio}|${patch.size}`:undefined};
+            }
+        }
         setNodes((prev) => prev.map((node) => (node.id === nodeId ? applyNodeConfigPatch(node, patch) : node)));
     }, []);
 
@@ -2373,6 +2391,22 @@ function InfiniteCanvasPage() {
         async (nodeId: string, mode: CanvasNodeGenerationMode, prompt: string) => {
             const sourceNode = nodesRef.current.find((node) => node.id === nodeId);
             const generationConfig = buildGenerationConfig(effectiveConfig, sourceNode, mode);
+            const plans = creativeSources(nodeId, nodesRef.current, connectionsRef.current);
+            if (plans.length) {
+                if (mode !== "image") { window.alert("创意策划第一版仅支持图片生成"); return; }
+                if (plans.some(p => !p.metadata?.creative?.description)) { window.alert("请先运行创意策划节点"); return; }
+                const ratios = [...new Set(plans.map(p => p.metadata!.creative!.ratio))];
+                if (ratios.length > 1) { window.alert("多个创意策划比例不同，请仅连接一个方案"); return; }
+                const planned = ratios[0];
+                if (!sourceNode?.metadata?.size || generationConfig.size === "auto") generationConfig.size = planned;
+                if (generationConfig.size !== planned && sourceNode?.metadata?.creativeRatioApproval !== `${planned}|${generationConfig.size}`) {
+                    const choice = await chooseCreativeRatio(planned, generationConfig.size);
+                    if (!choice) return;
+                    if (choice === "plan") generationConfig.size = planned;
+                }
+                setNodes(prev => prev.map(n => n.id === nodeId ? {...n,metadata:{...n.metadata,size:generationConfig.size}} : n));
+            }
+
             if (!isAiConfigReady(generationConfig, generationConfig.model)) {
                 openConfigDialog(true);
                 return;
@@ -2385,7 +2419,7 @@ function InfiniteCanvasPage() {
             const generationContext = await hydrateNodeGenerationContext(
                 buildNodeGenerationContext(nodeId, nodesRef.current, connectionsRef.current, editingTextNode ? `请根据要求修改以下文本。\n\n原文：\n${sourceTextContent}\n\n修改要求：\n${prompt}` : prompt),
             );
-            const effectivePrompt = generationContext.prompt.trim();
+            const effectivePrompt = plans.length ? generationContext.prompt.replace(/目标比例：[^\n]+/g, `目标比例：${generationConfig.size}`).trim() : generationContext.prompt.trim();
             if (runController.signal.aborted) {
                 finishGenerationRequest(nodeId, runController);
                 setRunningNodeId(null);
@@ -2761,6 +2795,10 @@ function InfiniteCanvasPage() {
     const handleRetryNode = useCallback(
         async (node: CanvasNodeData) => {
             const sourceNode = findRetrySourceNode(node.id, nodesRef.current, connectionsRef.current) || node;
+            if (creativeSources(node.id,nodesRef.current,connectionsRef.current).length) {
+                await handleGenerateNode(node.id,"image",""); return;
+            }
+
             const batchRoot = node.metadata?.batchRootId ? nodesRef.current.find((item) => item.id === node.metadata?.batchRootId) : null;
             const savedImageMetadata = node.type === CanvasNodeType.Image ? { ...batchRoot?.metadata, ...node.metadata } : undefined;
             const hasSavedImageMetadata = Boolean(savedImageMetadata?.generationType);
@@ -2924,6 +2962,24 @@ function InfiniteCanvasPage() {
         [effectiveConfig.canvasImageCount, effectiveConfig.count, effectiveConfig.imageModel, effectiveConfig.model, effectiveConfig.size, message],
     );
 
+    const generateCreativeImage = async (planId: string) => {
+        const plan = nodesRef.current.find(n => n.id === planId);
+        if (!plan?.metadata?.prompt?.trim()) return;
+        const imageConfig = {...effectiveConfig, model: effectiveConfig.imageModel || effectiveConfig.model};
+        if (!isAiConfigReady(imageConfig, imageConfig.model)) { openConfigDialog(true); return; }
+        const image = createCanvasNode(CanvasNodeType.Image, {
+            x: plan.position.x + plan.width + 120 + NODE_DEFAULT_SIZE[CanvasNodeType.Image].width / 2,
+            y: plan.position.y + plan.height / 2,
+        }, {size:plan.metadata.creative?.ratio || "16:9", model:imageConfig.model, quality:effectiveConfig.quality, count:1});
+        const nextNodes = [...nodesRef.current, image];
+        const nextConnections = [...connectionsRef.current, {id:nanoid(),fromNodeId:plan.id,toNodeId:image.id}];
+        nodesRef.current = nextNodes;
+        connectionsRef.current = nextConnections;
+        setNodes(nextNodes); setConnections(nextConnections);
+        setSelectedNodeIds(new Set([image.id]));
+        await handleGenerateNode(image.id, "image", "");
+    };
+
     if (!projectLoaded) return <CanvasRefreshShell />;
 
     return (
@@ -3017,7 +3073,7 @@ function InfiniteCanvasPage() {
                             resourceLabel={resourceReferenceByNodeId.get(node.id)}
                             mentionReferences={mentionReferencesByNodeId.get(node.id) || []}
                             renderPanel={(panelNode) =>
-                                panelNode.type === CanvasNodeType.Director ? null : panelNode.type === CanvasNodeType.Config ? (
+                                (panelNode.type === CanvasNodeType.Director || panelNode.type === CanvasNodeType.Creative) ? null : panelNode.type === CanvasNodeType.Config ? (
                                     <CanvasConfigComposer
                                         value={panelNode.metadata?.composerContent ?? panelNode.metadata?.prompt ?? ""}
                                         inputs={configInputsById.get(panelNode.id) || []}
@@ -3040,7 +3096,7 @@ function InfiniteCanvasPage() {
                                     />
                                 )
                             }
-                            renderNodeContent={(contentNode) => (
+                            renderNodeContent={(contentNode) => contentNode.type === CanvasNodeType.Creative ? <CreativePanel onGenerateImage={() => generateCreativeImage(contentNode.id)} node={contentNode} nodes={nodes} connections={connections} onChange={(metadata) => setNodes(prev => prev.map(n => n.id === contentNode.id ? {...n, metadata: {...n.metadata, ...metadata}} : n))} /> : (
                                 <CanvasConfigNodePanel
                                     node={contentNode}
                                     isRunning={runningNodeId === contentNode.id}
@@ -3157,6 +3213,7 @@ function InfiniteCanvasPage() {
                     onAddText={() => createNode(CanvasNodeType.Text)}
                     onAddConfig={() => createNode(CanvasNodeType.Config)}
                     onAddGroup={() => createNode(CanvasNodeType.Group)}
+                    onAddCreative={() => createNode(CanvasNodeType.Creative)}
                     onAddDirector={() => createNode(CanvasNodeType.Director)}
                     onUndo={undoCanvas}
                     onRedo={redoCanvas}
@@ -3641,6 +3698,8 @@ function normalizeConnection(firstNodeId: string, secondNodeId: string, nodes: C
     const second = nodes.find((node) => node.id === secondNodeId);
     if (!first || !second || first.id === second.id) return null;
     if (first.type === CanvasNodeType.Group || second.type === CanvasNodeType.Group) return null;
+    if (first.type === CanvasNodeType.Creative && second.type !== CanvasNodeType.Image) return null;
+    if (second.type === CanvasNodeType.Creative && first.type !== CanvasNodeType.Image) return null;
     if (first.type === CanvasNodeType.Config && second.type === CanvasNodeType.Config) return null;
     if (second.type === CanvasNodeType.Config) return { fromNodeId: first.id, toNodeId: second.id };
     if (first.type === CanvasNodeType.Config && firstHandleType === "target") return { fromNodeId: second.id, toNodeId: first.id };
