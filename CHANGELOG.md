@@ -1,3 +1,10 @@
+## v0.2.3 - 2026-09-22
+
+- Fix Director workspace project persistence per canvas node.
+- Restore camera view orbit, pan, zoom, and camera position write-back.
+- Add beginner-friendly Director workspace usage guide.
+- Refresh macOS and Windows desktop release assets.
+
 # Changelog
 
 ## v0.2.2 - 2026-09-16

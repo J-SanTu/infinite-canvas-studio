@@ -17,10 +17,20 @@ export async function loadDirectorProject(nodeId: string) {
 }
 
 export async function saveDirectorProject(nodeId: string, projectJson: string, canvasProjectId?: string) {
-    return request<{ project: DirectorProject }>(`/api/director-projects/${encodeURIComponent(nodeId)}`, {
-        method: "PUT",
-        body: JSON.stringify({ projectJson, canvasProjectId: canvasProjectId || null }),
-    });
+    try {
+        return await request<{ project: DirectorProject }>(`/api/director-projects/${encodeURIComponent(nodeId)}`, {
+            method: "PUT",
+            body: JSON.stringify({ projectJson, canvasProjectId: canvasProjectId || null }),
+        });
+    } catch (error) {
+        // A newly opened canvas can reach Director before its backend sync finishes.
+        // Persist the Director snapshot first; the next autosave will retry the association.
+        if (!canvasProjectId || !(error instanceof Error) || !error.message.includes("不属于本地工作区")) throw error;
+        return request<{ project: DirectorProject }>(`/api/director-projects/${encodeURIComponent(nodeId)}`, {
+            method: "PUT",
+            body: JSON.stringify({ projectJson, canvasProjectId: null }),
+        });
+    }
 }
 
 export async function deleteDirectorProject(nodeId: string) {
