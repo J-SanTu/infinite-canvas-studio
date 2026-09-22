@@ -71,8 +71,8 @@ pnpm start
 
 普通用户可直接选择对应平台下载：
 
-- Windows：[下载 Windows ZIP](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.3.0/Santu-Infinite-Canvas-0.3.0-win.zip)，解压后运行 `Santu Infinite Canvas.exe`。
-- Apple 芯片 macOS：[下载 DMG](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.3.0/Santu-Infinite-Canvas-0.3.0-arm64.dmg)，打开后将应用拖到“应用程序”。应用当前未签名，首次启动请按住 Control 点击，选择“打开”并确认。
+- Windows：[下载 Windows ZIP](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.3.0/Santu.Infinite.Canvas-0.3.0-win.zip)，解压后运行 `Santu Infinite Canvas.exe`。
+- Apple 芯片 macOS：[下载 DMG](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.3.0/Santu.Infinite.Canvas-0.3.0-arm64.dmg)，打开后将应用拖到“应用程序”。应用当前未签名，首次启动请按住 Control 点击，选择“打开”并确认。
 
 打包应用已包含运行所需环境，不需要另外安装 Node.js、pnpm，也不需要启动脚本。
 
