@@ -71,8 +71,8 @@ Open `http://127.0.0.1:5200`. The production command runs one Node process and s
 
 For end users, use the direct download for your platform:
 
-- Windows: [download the Windows ZIP](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.4.0/Santu.Infinite.Canvas-0.4.0-win.zip), extract it, and run `Santu Infinite Canvas.exe`.
-- macOS Apple Silicon: [download the DMG](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.4.0/Santu.Infinite.Canvas-0.4.0-arm64.dmg), open it, and drag the app to Applications. The app is unsigned; on first launch use Control-click, choose **Open**, and confirm.
+- Windows: [download the Windows ZIP](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu.Infinite.Canvas-0.5.0-win.zip), extract it, and run `Santu Infinite Canvas.exe`.
+- macOS Apple Silicon: [download the DMG](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu.Infinite.Canvas-0.5.0-arm64.dmg), open it, and drag the app to Applications. The app is unsigned; on first launch use Control-click, choose **Open**, and confirm.
 
 The packaged apps include their runtime and do not require Node.js, pnpm, or a separate launcher.
 
@@ -106,7 +106,7 @@ pnpm pack:mac
 
 Windows artifacts are written to the top-level `Windows/` folder; macOS artifacts are written to the top-level `macOS/` folder. These folders contain delivery packages only and are ignored by Git. See [RELEASE.md](./RELEASE.md) for separate GitHub upload instructions.
 
-Download the v0.4.0 Windows ZIP or macOS ARM64 DMG from the release links above. The release also includes source, macOS ZIP, and Windows installer/portable packages.
+Download the v0.5.0 Windows ZIP or macOS ARM64 DMG from the release links above. The release also includes source, macOS ZIP, and Windows installer/portable packages.
 
 On an Apple Silicon Mac, `pnpm pack:win:zip` creates the Windows x64 ZIP. Use the Windows GitHub Actions workflow for the installer and portable EXE.
 
@@ -222,8 +222,8 @@ pnpm start
 
 普通用户可直接选择对应平台下载：
 
-- Windows：[下载 Windows ZIP](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.4.0/Santu.Infinite.Canvas-0.4.0-win.zip)，解压后运行 `Santu Infinite Canvas.exe`。
-- Apple 芯片 macOS：[下载 DMG](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.4.0/Santu.Infinite.Canvas-0.4.0-arm64.dmg)，打开后将应用拖到“应用程序”。应用当前未签名，首次启动请按住 Control 点击，选择“打开”并确认。
+- Windows：[下载 Windows ZIP](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu.Infinite.Canvas-0.5.0-win.zip)，解压后运行 `Santu Infinite Canvas.exe`。
+- Apple 芯片 macOS：[下载 DMG](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu.Infinite.Canvas-0.5.0-arm64.dmg)，打开后将应用拖到“应用程序”。应用当前未签名，首次启动请按住 Control 点击，选择“打开”并确认。
 
 打包应用已包含运行所需环境，不需要另外安装 Node.js、pnpm，也不需要启动脚本。
 
@@ -259,7 +259,7 @@ pnpm pack:mac
 
 Windows 产物写入项目根目录的 `Windows/`，macOS 产物写入项目根目录的 `macOS/`。这两个目录只放交付包，并已加入 Git 忽略规则。分平台上传 GitHub 的方法见 [RELEASE.md](./RELEASE.md)。
 
-交付时可使用上方链接中的 v0.4.0 Windows ZIP 和 macOS ARM64 DMG；发布页还提供源码、macOS ZIP、Windows 安装版和便携版。
+交付时可使用上方链接中的 v0.5.0 Windows ZIP 和 macOS ARM64 DMG；发布页还提供源码、macOS ZIP、Windows 安装版和便携版。
 
 Apple 芯片 Mac 可运行 `pnpm pack:win:zip` 生成 Windows x64 ZIP；安装版和便携版 EXE 请使用 Windows GitHub Actions 工作流生成。
 
