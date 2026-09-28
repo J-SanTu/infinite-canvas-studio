@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+  <title>Santu Infinite Canvas 安装与更新</title>
+  <organization>cn.santu</organization>
+  <domains enable_localSystem="true" enable_currentUserHome="false" enable_anywhere="false"/>
+  <options customize="never" require-scripts="true" allow-external-scripts="true" hostArchitectures="arm64"/>
+  <welcome file="welcome.html"/>
+  <installation-check script="checkRunning()"/>
+  <script><![CDATA[
+    function checkRunning() {
+      if (system.run('/usr/bin/pgrep', '-f', '^.*/Santu Infinite Canvas.app/Contents/MacOS/') == 0) {
+        my.result.type = 'Fatal';
+        my.result.message = '请先退出 Santu Infinite Canvas，再重新打开安装器。画布、图片和 API 设置会保留。';
+        return false;
+      }
+      return true;
+    }
+  ]]></script>
+  <choices-outline><line choice="default"/></choices-outline>
+  <choice id="default" visible="false"><pkg-ref id="cn.santu.infinitecanvas.installer"/></choice>
+  <pkg-ref id="cn.santu.infinitecanvas.installer" version="__VERSION__" onConclusion="none">component.pkg</pkg-ref>
+</installer-gui-script>

@@ -127,29 +127,17 @@ export async function executeBatch(task: StoredTask, config: AiConfig, ids: stri
                     stage = "图片生成";
                     await update(item.id, { stage: "生图中", startedAt: Date.now() });
                     const targetSize = Number(task.size.split("x")[0]);
-                    // Retry only insufficient native resolution, always from the original reference.
-                    for (let attempt = 0; attempt < 3; attempt++) {
-                        stage = "图片生成";
-                        await update(item.id, { stage: attempt ? `原生高清重试 ${attempt}/2` : "生图中", startedAt: Date.now() });
-                        const result = await requestEdit(
-                            { ...config, size: "1:1", quality: attempt > 0 ? "high" : targetSize > 1024 || task.retouch ? "medium" : "low", count: "1", model: config.imageModel || config.model, imageModel: config.imageModel || config.model },
-                            `${PROMPT}\n${FIDELITY}${task.retouch ? `\n${RETOUCH}` : ""}\n请输出原生分辨率至少 ${targetSize}×${targetSize} 的正方形图片，不要返回低分辨率预览图。`,
-                            [reference],
-                            undefined,
-                            { preserveNativeSize: true },
-                        );
-                        const url = result[0]?.dataUrl;
-                        if (!url) throw new Error("模型未返回图片");
-                        stage = "JPG 导出";
-                        await update(item.id, { stage: "检查原生尺寸并导出 JPG", url, startedAt: Date.now() });
-                        try {
-                            finalUrl = await exportJpeg(url, targetSize);
-                            break;
-                        } catch (error) {
-                            if (!(error instanceof Error) || error.name !== "NativeResolutionError") throw error;
-                            if (attempt === 2) throw new Error(`已自动重试 2 次，${error.message}；请检查所选模型或服务商的原生高清输出能力`);
-                        }
-                    }
+                    const generationConfig = { ...config, size: "1:1", quality: "high", count: "1", model: config.imageModel || config.model, imageModel: config.imageModel || config.model };
+                    const result = await requestEdit(
+                        generationConfig,
+                        `${PROMPT}\n${FIDELITY}${task.retouch ? `\n${RETOUCH}` : ""}\n使用与无限画布 4K 档位一致的高清设置，1:1 正方形构图。`,
+                        [reference], undefined, { preserveNativeSize: true },
+                    );
+                    const url = result[0]?.dataUrl;
+                    if (!url) throw new Error("模型未返回图片");
+                    stage = "JPG 导出";
+                    await update(item.id, { stage: "按所选尺寸导出", url, startedAt: Date.now() });
+                    finalUrl = await exportJpeg(url, targetSize);
                 }
                 if (!finalUrl) throw new Error("没有可以压缩的已生成图片");
                 let warning: string | undefined;
@@ -223,6 +211,7 @@ async function blobDataUrl(blob: Blob) {
 }
 
 async function exportJpeg(source: string, size: number) {
+    if (![800, 1600, 2000].includes(size)) throw new Error("不支持的导出尺寸");
     const response = await fetch(source);
     if (!response.ok) throw new Error(`结果读取失败 (${response.status})`);
     const localUrl = URL.createObjectURL(await response.blob());
@@ -233,7 +222,7 @@ async function exportJpeg(source: string, size: number) {
             image.onerror = () => reject(new Error("返回图片无法解码"));
             image.src = localUrl;
         });
-        if (Math.min(image.naturalWidth, image.naturalHeight) < size) throw Object.assign(new Error(`上游实际返回 ${image.naturalWidth}×${image.naturalHeight}，不足以清晰导出 ${size}×${size}；已保留原生预览，未放大冒充高清`), { name: "NativeResolutionError" });
+        if (!image.naturalWidth || !image.naturalHeight) throw new Error("返回图片尺寸无效");
         const canvas = document.createElement("canvas");
         canvas.width = canvas.height = size;
         const context = canvas.getContext("2d");
@@ -243,6 +232,8 @@ async function exportJpeg(source: string, size: number) {
         const scale = Math.min(size / image.naturalWidth, size / image.naturalHeight);
         const width = image.naturalWidth * scale,
             height = image.naturalHeight * scale;
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
         context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
         return canvas.toDataURL("image/jpeg", 0.95);
     } finally {

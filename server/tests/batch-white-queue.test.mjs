@@ -66,18 +66,14 @@ test('opening an interrupted compression preserves JPEG for compression-only rec
  assert.match(task.items[0].error,/仅重试压缩/);
 });
 
-test('low native resolution retries from the original input and succeeds without upscaling',async()=>{
- const f=await fixture(1); f.task.items=f.task.items.slice(0,1);f.task.size='1600x1600';
- const running=f.api.executeBatch(f.task,{},['0']);await tick();f.releases[0]();await tick();
- assert.equal(f.started.length,2);assert.equal(f.configs[1].quality,'high');
- f.releases[1]();await running;
- const saved=await f.api.batchStore.getItem('task:task1');assert.equal(saved.items[0].status,'done');
+test('batch requests canvas 4K preset once, exports selected size without super-resolution',async()=>{
+ const f=await fixture();f.task.items=f.task.items.slice(0,1);f.task.size='1600x1600';
+ const running=f.api.executeBatch(f.task,{},['0']);await tick();f.releases[0]();await running;
+ assert.deepEqual(f.started,['0']);assert.equal(f.configs[0].quality,'high');assert.equal(f.configs[0].size,'1:1');
+ const saved=await f.api.batchStore.getItem('task:task1');assert.equal(saved.items[0].status,'done');assert.equal(saved.items[0].url,'jpg');
 });
-test('native resolution retries stop after three total requests and retain preview',async()=>{
- const f=await fixture(3);f.task.items=f.task.items.slice(0,1);
- const running=f.api.executeBatch(f.task,{},['0']);
- for(let i=0;i<3;i++){await tick();f.releases[i]();}await running;
- const saved=await f.api.batchStore.getItem('task:task1');assert.equal(f.started.length,3);
- assert.equal(saved.items[0].status,'failed');assert.equal(saved.items[0].url,'generated');
- assert.match(saved.items[0].error,/已自动重试 2 次/);
+test('export errors retain the generated image without additional model calls',async()=>{
+ const f=await fixture(1);f.task.items=f.task.items.slice(0,1);
+ const running=f.api.executeBatch(f.task,{},['0']);await tick();f.releases[0]();await running;
+ const saved=await f.api.batchStore.getItem('task:task1');assert.deepEqual(f.started,['0']);assert.equal(saved.items[0].status,'failed');assert.equal(saved.items[0].url,'generated');
 });

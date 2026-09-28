@@ -23,9 +23,9 @@
         "start": "node server.js",
         "start:browser": "node desktop/start-browser.js",
         "desktop": "vite build && electron .",
-        "pack:win": "vite build && electron-builder --win nsis portable zip --x64 --publish never --config.directories.output=Windows",
+        "pack:win": "vite build && electron-builder --win nsis --x64 --publish never --config.directories.output=.build.noindex/windows && node desktop/collect-windows-installer.js",
         "pack:win:zip": "vite build && electron-builder --win zip --x64 --publish never --config.directories.output=Windows",
-        "pack:mac": "vite build && electron-builder --mac dmg zip --arm64 --publish never --config.directories.output=macOS",
+        "pack:mac": "vite build && electron-builder --mac dir --arm64 --publish never --config.directories.output=.build.noindex/mac && bash desktop/build-mac-installer.sh",
         "format": "prettier --write .",
         "format:check": "prettier --check ."
     },
@@ -77,7 +77,7 @@
         "productName": "Santu Infinite Canvas",
         "asar": true,
         "directories": {
-            "output": "Windows"
+            "output": ".build.noindex"
         },
         "files": [
             "dist/**",
@@ -107,11 +107,14 @@
             "icon": "build/icon.icns"
         },
         "nsis": {
-            "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
+            "artifactName": "Santu-Infinite-Canvas-${version}-Windows-setup.${ext}",
             "oneClick": false,
-            "allowToChangeInstallationDirectory": true,
+            "allowToChangeInstallationDirectory": false,
             "createDesktopShortcut": true,
-            "createStartMenuShortcut": true
+            "createStartMenuShortcut": true,
+            "deleteAppDataOnUninstall": false,
+            "shortcutName": "Santu Infinite Canvas",
+            "uninstallDisplayName": "Santu Infinite Canvas"
         },
         "portable": {
             "artifactName": "${productName}-${version}-${arch}-portable.${ext}"

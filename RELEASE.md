@@ -1,44 +1,23 @@
-# Desktop Release Packages
+# 安装包更新与 GitHub 交付
 
-Desktop artifacts are separated by platform so they can be uploaded to GitHub independently.
+版本保持 0.5.0，同版本修复更新现有 Release，不新增版本报告。
 
-## Windows
+## 打包
 
-Build on Windows, or run the `Windows desktop build` GitHub Actions workflow:
+- Windows：`pnpm pack:win`，产物 `Windows/Santu-Infinite-Canvas-0.5.0-Windows-setup.exe`。
+- Apple 芯片 Mac：`pnpm pack:mac`，产物 `macOS/Santu-Infinite-Canvas-0.5.0-arm64.pkg`。
+- 中间产物放在 `.build.noindex`；安装文件和用户数据均不提交到 Git。
+- Windows ZIP 可使用 `pnpm pack:win:zip` 另行生成；它不支持固定位置覆盖安装。
 
-```bash
-pnpm pack:win
-```
+## 更新行为
 
-Upload the release files from the top-level `Windows/` folder:
+Mac PKG 固定覆盖 /Applications/Santu Infinite Canvas.app，备份旧应用并保留用户数据。Windows 安装版复用现有安装目录，保持应用标识和快捷方式名称，保留用户数据。安装前退出软件。任意目录中的 ZIP 解压副本不会被自动清理。
 
-- `*-setup.exe` - installer for Windows x64
-- `*-portable.exe` - portable Windows x64 application
-- `*.zip` - unpacked Windows x64 application with an executable inside
+## 上传顺序
 
-An Apple Silicon Mac can generate the Windows ZIP without NSIS:
+1. 检查目标仓库 J-SanTu/infinite-canvas-studio 和已有 v0.5.0。
+2. 逐个上传安装包；等待完成，核验附件状态、字节数和 SHA256。只重试未完成文件。
+3. 用 API 返回的 browser_download_url 更新 README.md 及 README.zh-CN.md，包含 README 中内嵌的中文段落。
+4. 推送审核后的源码，更新源码 ZIP；确认远程 main 和下载链接。
 
-```bash
-pnpm pack:win:zip
-```
-
-The Windows installer and portable single-file EXE must be produced by the Windows GitHub Actions workflow or on a Windows computer.
-
-## macOS
-
-Build on an Apple Silicon Mac, or run the `macOS desktop build` GitHub Actions workflow:
-
-```bash
-pnpm pack:mac
-```
-
-Upload the files from the top-level `macOS/` folder:
-
-- `*.dmg` - macOS Apple Silicon installer image
-- `*.zip` - zipped macOS Apple Silicon application
-
-The current macOS package is unsigned. On first launch, use Control-click, choose **Open**, and confirm. Public distribution should add an Apple Developer ID signature and notarization.
-
-## GitHub Upload
-
-Create one GitHub Release for the version, then upload the Windows files from `Windows/` and the macOS files from `macOS/` as separate assets. These top-level folders are local delivery folders and are ignored by Git so large installers do not enter the source repository.
+详情见 [GitHub 上传规则](docs/GitHub上传规则.md)。Mac 当前 PKG 未进行 Developer ID Installer 签名或 Apple 公证。Windows 包编译和内容检查通过不等于实机安装验证。

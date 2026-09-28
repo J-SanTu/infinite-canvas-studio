@@ -41,6 +41,7 @@ const server = createServer(async (req, res) => {
         }
 
         const user = localWorkspace;
+
         if (req.method === "GET" && url.pathname === "/api/creative/product-page") {
             try { return sendJson(res, 200, await readProductPage(url.searchParams.get("url") || "")); }
             catch (error) { return sendJson(res, 400, { error: error.message }); }

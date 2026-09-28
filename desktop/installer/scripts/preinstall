@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+APP='/Applications/Santu Infinite Canvas.app'
+BACKUP='/Library/Application Support/Santu Installer/previous.noindex'
+if /usr/bin/pgrep -f '^.*/Santu Infinite Canvas.app/Contents/MacOS/' >/dev/null; then
+    echo '请先退出 Santu Infinite Canvas，再重新运行安装器。' >&2
+    exit 1
+fi
+if [ -L "$APP" ]; then
+    echo '安装位置为符号链接，已停止安装以保护现有文件。' >&2
+    exit 1
+fi
+if [ -e "$APP" ]; then
+    ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")
+    [ "$ID" = 'cn.santu.infinitecanvas' ] || exit 1
+    /usr/bin/codesign --verify --deep --strict "$APP"
+    /bin/mkdir -p "$BACKUP"
+    # Archive, rather than leave a second .app that Launchpad could discover.
+    /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP" "$BACKUP/previous-app.new.zip"
+    /bin/mv -f "$BACKUP/previous-app.new.zip" "$BACKUP/previous-app.zip"
+fi
+exit 0

@@ -824,6 +824,7 @@ export async function requestAiSuperResolution(config: AiConfig, dataUrl: string
         const image = parseImagePayload(response.data)[0];
         const sourceDataUrl = await imageToDataUrl({ dataUrl: image.dataUrl }).catch(() => image.dataUrl);
         const meta = await readImageMeta(sourceDataUrl);
+        if (options?.preserveNativeSize) return { ...image, dataUrl: sourceDataUrl, width: meta.width, height: meta.height };
         const normalized = meta.width === width && meta.height === height ? sourceDataUrl : await resizeDataUrlToExactSize(sourceDataUrl, { width, height, algorithm: "high" });
         return { ...image, dataUrl: normalized, width, height };
     } catch (error) {

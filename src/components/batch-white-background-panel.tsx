@@ -217,6 +217,23 @@ export function BatchWhiteBackgroundPanel({ config, onOpenConfig }: { config: Ai
             message.error(error instanceof Error ? error.message : "任务执行失败");
         }
     };
+    const [downloadingItems, setDownloadingItems] = useState<string[]>([]);
+    const downloadLocks = useRef(new Set<string>());
+    const downloadItem = async (item: Item) => {
+        if (item.status !== "done" || !item.url || downloadLocks.current.has(item.id)) return;
+        downloadLocks.current.add(item.id);
+        setDownloadingItems((ids) => [...ids, item.id]);
+        try {
+            const response = await fetch(item.url);
+            if (!response.ok) throw new Error(`图片读取失败 (${response.status})`);
+            saveAs(await response.blob(), safeExportName(item.outputName));
+        } catch (error) {
+            message.error(error instanceof Error ? error.message : "图片下载失败，请重试");
+        } finally {
+            downloadLocks.current.delete(item.id);
+            setDownloadingItems((ids) => ids.filter((id) => id !== item.id));
+        }
+    };
     const [downloading, setDownloading] = useState(false);
     const download = async (currentFolder = false) => {
         if (downloading) return;
@@ -404,6 +421,20 @@ export function BatchWhiteBackgroundPanel({ config, onOpenConfig }: { config: Ai
                     {visible.length ? (
                         visible.slice((page - 1) * 24, page * 24).map((item) => (
                             <div title={item.error} key={item.id} className="min-w-0 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
+                                <div className="relative">
+                                <Tooltip title={item.status === "done" && item.url ? "下载此图片" : "生成完成后可下载"}>
+                                    <span className="absolute right-2 top-2 z-10">
+                                        <Button
+                                            shape="circle"
+                                            className="!bg-white !text-stone-800 shadow-md disabled:!text-stone-400"
+                                            aria-label={`下载 ${item.outputName}`}
+                                            icon={<Download className="size-4" />}
+                                            disabled={item.status !== "done" || !item.url}
+                                            loading={downloadingItems.includes(item.id)}
+                                            onClick={(event) => { event.stopPropagation(); void downloadItem(item); }}
+                                        />
+                                    </span>
+                                </Tooltip>
                                 {item.url ? (
                                     <Image loading="lazy" src={item.url} alt={item.outputName} className="aspect-square object-cover" />
                                 ) : (
@@ -411,6 +442,7 @@ export function BatchWhiteBackgroundPanel({ config, onOpenConfig }: { config: Ai
                                         {item.status === "processing" ? <LoaderCircle className="animate-spin" /> : item.status === "failed" ? <span className="line-clamp-5">{item.error}</span> : "等待生成"}
                                     </div>
                                 )}
+                                </div>
                                 <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs">
                                     <span className="truncate">{item.outputName}</span>
                                     <Tag className="m-0 shrink-0">{item.status === "done" ? (item.error ? "已生成 · 压缩未完成" : "已完成") : item.status === "failed" ? "处理失败" : item.status === "processing" ? item.stage || "处理中" : "排队中"}</Tag>

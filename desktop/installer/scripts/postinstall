@@ -1,0 +1,16 @@
+#!/bin/bash
+set -eu
+APP='/Applications/Santu Infinite Canvas.app'
+BACKUP='/Library/Application Support/Santu Installer/previous.noindex/previous-app.zip'
+if ! /usr/bin/codesign --verify --deep --strict "$APP"; then
+    if [ -f "$BACKUP" ]; then
+        FAILED="/Library/Application Support/Santu Installer/failed-$(date +%s).noindex"
+        /bin/mkdir -p "$FAILED"
+        /bin/mv "$APP" "$FAILED/"
+        /usr/bin/ditto -x -k "$BACKUP" /Applications
+    fi
+    echo '新程序校验失败，已尝试恢复旧程序；请勿删除安装备份。' >&2
+    exit 1
+fi
+# User data is deliberately outside the payload and never modified here.
+exit 0

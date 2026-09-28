@@ -18,3 +18,5 @@ server/data/
 /Windows-logo/
 /release-v*/
 /node_modules
+
+/.build.noindex/

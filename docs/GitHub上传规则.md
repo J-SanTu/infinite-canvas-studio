@@ -11,3 +11,15 @@
 - 以 GitHub API 返回的 browser_download_url 为准同步 README.md 和 README.zh-CN.md。GitHub 可能把空格改成点号，不猜测最终名称。
 - 每个 Release 只保留本版本中文说明，禁止把整个 CHANGELOG.md 用作发布正文。
 - 发布完成分别核对远程源码提交、附件名称/大小/SHA256、README 链接；不能把本地完成说成远程完成。
+
+## DMG 挂载保护
+
+替换本地 DMG 前先检查 hdiutil info。若目标文件仍被挂载，不得原地覆盖；使用不同文件名交付，或先正常退出安装盘。验证不仅包括签名和 SHA256，还必须从重新挂载的镜像复制应用并实际启动，检查本地页面响应。旧挂载出现 errno=5 时应重新挂载，不能据此认定运行库未打包。
+
+## 覆盖安装包交付
+
+- 默认推荐 macOS PKG 与 Windows setup.exe。保持 appId、应用名和快捷方式名不变；Windows 使用已有注册表安装目录，Mac 固定 /Applications。
+- `pnpm pack:mac` 输出 macOS/*.pkg；`pnpm pack:win` 输出 Windows/*-Windows-setup.exe；中间应用目录使用 .build.noindex。
+- 同版本更新先上传新命名附件并校验，再将 README.md（包括内嵌中文段落）和 README.zh-CN.md 的旧 DMG/ZIP 推荐链接替换为新安装包的真实 browser_download_url。上传未完成不能将链接视为已生效。
+- 保留既有发布正文，不创建新版本报告；无需删除旧附件来完成链接切换。
+- Windows 无实机测试时仅报告编译和包内容检查通过，不宣称已完成实际覆盖测试。
