@@ -8,8 +8,9 @@ import { readDb, updateDb } from "./store.js";
 const serverDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const secretPath = process.env.CANVAS_SECRET_PATH ? resolve(process.env.CANVAS_SECRET_PATH) : resolve(serverDir, "data/backend-api-secret.key");
 export const DEFAULT_BASE_URL = "https://api.example.com";
-const CAPABILITIES = new Set(["image", "text", "video", "audio", "music"]);
+const CAPABILITIES = new Set(["image", "text", "video", "audio", "music", "tinify"]);
 const DEFAULTS = {
+    tinify: { name: "Tinify 图片压缩", baseUrl: "https://api.tinify.com", apiFormat: "openai", models: [] },
     image: { name: "图片 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "gpt-5.5"] },
     text: { name: "文本 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["gpt-5.5"] },
     video: { name: "视频 API", baseUrl: DEFAULT_BASE_URL, apiFormat: "openai", models: ["grok-imagine-video"] },
@@ -39,7 +40,7 @@ export async function updateLocalApiSetting(capability, input = {}) {
         name: String(input.name || current?.name || DEFAULTS[normalizedCapability].name)
             .trim()
             .slice(0, 80),
-        baseUrl: normalizeBaseUrl(input.baseUrl === undefined ? current?.baseUrl || DEFAULTS[normalizedCapability].baseUrl : input.baseUrl),
+        baseUrl: normalizedCapability === "tinify" ? DEFAULTS.tinify.baseUrl : normalizeBaseUrl(input.baseUrl === undefined ? current?.baseUrl || DEFAULTS[normalizedCapability].baseUrl : input.baseUrl),
         apiFormat: input.apiFormat === undefined ? current?.apiFormat || "openai" : input.apiFormat === "gemini" ? "gemini" : "openai",
         encryptedApiKey: apiKey ? await encryptSecret(normalizeApiKey(apiKey)) : current.encryptedApiKey,
         apiKeyHash: apiKey ? hashSecret(apiKey) : current.apiKeyHash,

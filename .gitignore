@@ -12,3 +12,9 @@ local-tests/
 .env.*
 !.env.example
 server/data/
+
+# Local packaging outputs and dependency symlink
+/macOS-logo/
+/Windows-logo/
+/release-v*/
+/node_modules

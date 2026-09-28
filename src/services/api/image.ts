@@ -84,7 +84,7 @@ type GeminiPayload = {
     promptFeedback?: { blockReason?: string };
 };
 type GeminiStreamState = { buffer: string; text: string; toolCalls: ResponseToolCall[]; error?: string };
-type RequestOptions = { signal?: AbortSignal };
+type RequestOptions = { signal?: AbortSignal; preserveNativeSize?: boolean };
 
 const QUALITY_BASE: Record<string, number> = {
     low: 1024,
@@ -689,7 +689,10 @@ async function requestGeminiImagesOnce(config: AiConfig, prompt: string, referen
         },
         { headers: { ...geminiHeaders(config), ...canvasImageRequestHeaders(config.baseUrl, config.model, config.quality, references.length ? "edit" : "generation", 1) }, signal: options?.signal },
     );
-    return normalizeImagesToRequestedSize(parseGeminiImagePayload(response.data), resolveRequestSize(normalizeQuality(config.quality), config.size), { config, prompt });
+    if (options?.preserveNativeSize) return parseGeminiImagePayload(response.data);
+    const images = parseGeminiImagePayload(response.data);
+    if (options?.preserveNativeSize) return images;
+    return normalizeImagesToRequestedSize(images, resolveRequestSize(normalizeQuality(config.quality), config.size), { config, prompt });
 }
 
 function parseGeminiImagePayload(payload: GeminiPayload) {
@@ -738,6 +741,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
             },
         );
         const images = parseImagePayload(response.data);
+        if (options?.preserveNativeSize) return images;
         return normalizeImagesToRequestedSize(images, requestSize, { config: requestConfig, prompt, signal: options?.signal, aiSuperResolve: true });
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));
@@ -780,6 +784,7 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
             signal: options?.signal,
         });
         const images = parseImagePayload(response.data);
+        if (options?.preserveNativeSize) return images;
         return normalizeImagesToRequestedSize(images, requestSize, { config: requestConfig, prompt: requestPrompt, signal: options?.signal, aiSuperResolve: true });
     } catch (error) {
         throw new Error(readAxiosError(error, "请求失败"));

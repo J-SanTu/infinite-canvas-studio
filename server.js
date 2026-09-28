@@ -4,6 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { clearCanvasCache, getCanvasBootstrap, pushCanvasProjects } from "./server/lib/canvas-sync.js";
+import { compressJpeg } from "./server/lib/tinify.js";
 import { listLocalApiSettings, updateLocalApiSetting } from "./server/lib/backend-api-config.js";
 import { proxyBackendApi } from "./server/lib/backend-api-proxy.js";
 import { getStorageObject, putStorageObject } from "./server/lib/storage-objects.js";
@@ -61,9 +62,15 @@ const server = createServer(async (req, res) => {
             return sendJson(res, 200, { preferences: await updateUiPreferences(await readJson(req)) });
         }
 
-        const apiSettingMatch = url.pathname.match(/^\/api\/settings\/apis\/(image|text|video|audio|music)$/);
+        const apiSettingMatch = url.pathname.match(/^\/api\/settings\/apis\/(image|text|video|audio|music|tinify)$/);
         if (apiSettingMatch && req.method === "PUT") {
             return sendJson(res, 200, { config: await updateLocalApiSetting(apiSettingMatch[1], await readJson(req)) });
+        }
+
+        if (req.method === "POST" && url.pathname === "/api/tinify/compress") {
+            const output = await compressJpeg(await readRawBody(req));
+            res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "no-store" });
+            return res.end(output);
         }
 
         if (url.pathname.startsWith("/api/ai/")) {

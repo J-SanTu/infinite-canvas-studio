@@ -62,6 +62,7 @@ app.on("window-all-closed", () => {
 
 function createWindow() {
     const window = new BrowserWindow({
+        icon: join(app.getAppPath(), "build", "icon.png"),
         width: 1440,
         height: 920,
         minWidth: 1080,

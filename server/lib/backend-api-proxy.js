@@ -70,6 +70,7 @@ async function proxyRequest(req, res, upstreamPath, user, imageOperation, resolv
     }
 
     let response;
+    let body;
     try {
         response = await fetch(target, {
             method: req.method,
@@ -77,6 +78,7 @@ async function proxyRequest(req, res, upstreamPath, user, imageOperation, resolv
             body: requestBody,
             duplex: "half",
         });
+        body = Buffer.from(await response.arrayBuffer());
     } catch (error) {
         if (generationRun) {
             const errorCode = classifyUpstreamFailure(0, error);
@@ -93,7 +95,6 @@ async function proxyRequest(req, res, upstreamPath, user, imageOperation, resolv
         return;
     }
 
-    const body = Buffer.from(await response.arrayBuffer());
     if (imageOperation && response.ok) {
         const payload = parseJson(body);
         if (isSuccessfulImagePayload(payload)) {

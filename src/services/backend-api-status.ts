@@ -1,4 +1,4 @@
-export type ApiCapability = "image" | "text" | "video" | "audio" | "music";
+export type ApiCapability = "image" | "text" | "video" | "audio" | "music" | "tinify";
 
 export type LocalApiConfig = {
     capability: ApiCapability;

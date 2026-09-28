@@ -1,6 +1,6 @@
 {
     "name": "santu-infinite-canvas",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Local-first single-user AI creation workspace with an infinite canvas.",
     "author": "Santu Infinite Canvas contributors",
     "private": true,
@@ -84,14 +84,16 @@
             "desktop/main.js",
             "server.js",
             "server/lib/**",
-            "package.json"
+            "package.json",
+            "build/icon.png"
         ],
         "win": {
             "target": [
                 "nsis",
                 "portable",
                 "zip"
-            ]
+            ],
+            "icon": "build/icon.ico"
         },
         "mac": {
             "target": [
@@ -101,7 +103,8 @@
             "category": "public.app-category.graphics-design",
             "identity": "-",
             "hardenedRuntime": false,
-            "artifactName": "${productName}-${version}-${arch}.${ext}"
+            "artifactName": "${productName}-${version}-${arch}.${ext}",
+            "icon": "build/icon.icns"
         },
         "nsis": {
             "artifactName": "${productName}-${version}-${arch}-setup.${ext}",

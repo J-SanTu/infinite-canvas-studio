@@ -21,6 +21,7 @@ import { useAssetStore } from "@/stores/use-asset-store";
 import { useWorkbenchAgentStore } from "@/stores/use-workbench-agent-store";
 import type { ReferenceImage } from "@/types/image";
 import type { PromptSaveSource } from "@/types/prompt-library";
+import { BatchWhiteBackgroundPanel } from "@/components/batch-white-background-panel";
 
 type GeneratedImage = {
     id: string;
@@ -94,6 +95,7 @@ export default function ImagePage() {
     const [previewLog, setPreviewLog] = useState<GenerationLog | null>(null);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [autoRunToken, setAutoRunToken] = useState(0);
+    const [workbenchMode, setWorkbenchMode] = useState<"normal" | "white-background">("normal");
     const imageCommand = useWorkbenchAgentStore((state) => state.imageCommand);
     const clearImageCommand = useWorkbenchAgentStore((state) => state.clearImageCommand);
     const processedCommandRef = useRef(0);
@@ -376,6 +378,29 @@ export default function ImagePage() {
         }
     };
 
+    if (workbenchMode === "white-background") {
+        return (
+            <div className="flex h-full flex-col overflow-hidden bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
+                <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto p-3 lg:grid-cols-[300px_minmax(0,1fr)] lg:overflow-hidden xl:grid-cols-[320px_minmax(0,1fr)]">
+                    <aside className="thin-scrollbar hidden min-h-0 overflow-y-auto rounded-lg border border-stone-200 bg-card p-4 shadow-sm dark:border-stone-800 lg:block">
+                        <div id="batch-task-history" />
+                    </aside>
+                    <section className="grid gap-3 lg:min-h-0 lg:overflow-hidden">
+                        <div className="thin-scrollbar flex min-h-0 flex-col rounded-lg border border-stone-200 bg-card p-4 shadow-sm dark:border-stone-800 lg:overflow-y-auto">
+                            <div className="flex items-start justify-between gap-3">
+                                <h1 className="text-2xl font-semibold text-stone-950 dark:text-stone-100">生图工作台</h1>
+                                <div className="flex shrink-0 gap-2">
+                                    <Button size="small" onClick={() => setWorkbenchMode("normal")}>常规生图</Button>
+                                    <Button size="small" type="primary">批量白底图</Button>
+                                </div>
+                            </div>
+                            <div className="mt-6 min-h-0 flex-1"><BatchWhiteBackgroundPanel config={effectiveConfig} onOpenConfig={() => openConfigDialog(false, "apis")} /></div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        );
+    }
     return (
         <div className="flex h-full flex-col overflow-hidden bg-stone-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
             <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto p-3 lg:grid-cols-[300px_minmax(0,1fr)] lg:overflow-hidden xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -397,6 +422,10 @@ export default function ImagePage() {
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <h1 className="text-2xl font-semibold text-stone-950 dark:text-stone-100">生图工作台</h1>
+                                </div>
+                                <div className="flex shrink-0 gap-2">
+                                    <Button size="small" type="primary">常规生图</Button>
+                                    <Button size="small" onClick={() => setWorkbenchMode("white-background")}>批量白底图</Button>
                                 </div>
                                 <div className="flex shrink-0 gap-2 lg:hidden">
                                     <Button icon={<History className="size-4" />} onClick={() => setLogsOpen(true)}>

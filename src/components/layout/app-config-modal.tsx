@@ -2,6 +2,7 @@ import { App, Button, Form, Input, Modal, Select, Tabs, Tag } from "antd";
 import { KeyRound, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { migrateTinifyKey } from "@/services/batch-white-tasks";
 import { ModelPicker } from "@/components/model-picker";
 import { fetchLocalApiSettings, updateLocalApiSetting, type ApiCapability, type LocalApiConfig, type LocalApiSettings } from "@/services/backend-api-status";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
@@ -16,7 +17,7 @@ type ModelGroup = {
 };
 
 const API_CAPABILITIES: ApiCapability[] = ["image", "text", "video", "audio", "music"];
-const API_LABELS: Record<ApiCapability, string> = { image: "图片", text: "文本", video: "视频", audio: "音频", music: "音乐" };
+const API_LABELS: Record<ApiCapability, string> = { image: "图片", text: "文本", video: "视频", audio: "音频", music: "音乐", tinify: "Tinify 图片压缩" };
 const modelGroups: ModelGroup[] = [
     { capability: "image", modelKey: "imageModel", modelsKey: "imageModels", defaultLabel: "默认图片模型", optionsLabel: "图片模型" },
     { capability: "text", modelKey: "textModel", modelsKey: "textModels", defaultLabel: "默认文本模型", optionsLabel: "文本模型" },
@@ -39,6 +40,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "apis" }: 
     const loadSettings = async () => {
         setLoading(true);
         try {
+            await migrateTinifyKey();
             const next = await fetchLocalApiSettings();
             setSettings(next);
             syncModels(next);
@@ -114,6 +116,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "apis" }: 
                                           />
                                       ))
                                     : null}
+                                {settings?.tinify && <ApiSettingCard capability="tinify" config={settings.tinify} onChange={(next) => setSettings({ ...settings, tinify: next })} />}
                             </div>
                         ),
                     },
@@ -243,9 +246,9 @@ function ApiSettingCard({ capability, config, onChange }: { capability: ApiCapab
                 {config.updatedAt ? <span className="text-xs text-stone-500">更新于 {new Date(config.updatedAt).toLocaleString()}</span> : null}
             </div>
             <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1.2fr]">
-                <Input className="min-w-0" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://api.example.com" addonBefore="Base URL" />
+                <Input disabled={capability === "tinify"} className="min-w-0" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://api.example.com" addonBefore="Base URL" />
                 <Input.Password className="min-w-0" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={config.configured ? "留空保留现有密钥" : "输入 API Key"} addonBefore="API Key" />
-                <Select className="min-w-0" mode="tags" value={models} onChange={setModels} placeholder="模型名称" tokenSeparators={[","]} maxTagCount="responsive" />
+                {capability !== "tinify" && <Select className="min-w-0" mode="tags" value={models} onChange={setModels} placeholder="模型名称" tokenSeparators={[","]} maxTagCount="responsive" />}
             </div>
             <div className="mt-3 flex justify-end gap-2">
                 <Button danger icon={<Trash2 className="size-4" />} disabled={!config.configured || saving} onClick={() => void clear()}>

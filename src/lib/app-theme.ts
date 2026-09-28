@@ -43,6 +43,10 @@ export function getAntThemeConfig(dark: boolean): ThemeConfig {
             colorTextLightSolid: color.primaryText,
         },
         components: {
+            Tooltip: {
+                // Tooltip text sits on a dark surface in both themes, unlike primary buttons.
+                colorTextLightSolid: "#ffffff",
+            },
             Button: {
                 primaryShadow: "none",
             },

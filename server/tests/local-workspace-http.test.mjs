@@ -88,3 +88,17 @@ test("API settings stay local, hide secrets, and drive the AI proxy", async () =
     assert.equal(database.sessions.length, 0);
     assert.doesNotMatch(JSON.stringify(database), /local-secret-key/);
 });
+
+test("Tinify settings encrypt secrets and expose no key to the browser", async () => {
+    const response = await fetch(`${local.url}/api/settings/apis/tinify`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: "tinify-test-secret" }),
+    });
+    assert.equal(response.status, 200);
+    const body = await response.text();
+    assert.equal(JSON.parse(body).config.configured, true);
+    assert.doesNotMatch(body, /tinify-test-secret/);
+    assert.doesNotMatch(await readFile(process.env.CANVAS_DB_PATH, "utf8"), /tinify-test-secret/);
+    const invalid = await fetch(`${local.url}/api/tinify/compress`, { method: "POST", body: "not-an-image" });
+    assert.equal(invalid.status, 400);
+});
