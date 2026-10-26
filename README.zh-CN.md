@@ -1,10 +1,5 @@
 # Santu 无限画布
 
-## 1.0.0 正式版 · 2026-10-26
-
-整合画布 AI 对话、多模态方案工作流、拖拽引用、本地技能、多 API 渠道和模型批选、参考图网格与组合、素材模板及历史导航。修复侧栏高亮与模板/吸附跨重启保存。支持正式版覆盖安装并保留数据；Beta 数据独立。详见 [1.0.0 更新说明](https://github.com/J-SanTu/infinite-canvas-studio/releases/tag/v1.0.0)。
-
-
 [EN](./README.md#santu-infinite-canvas) · [中文](./README.md#santu-无限画布)
 
 Santu 无限画布是一套本地优先、单机单用户的 AI 创作桌面工作区。它把提示词、参考素材、生成任务和交付内容连接在同一张可复用画布中，打开后无需注册或登录。
@@ -76,8 +71,8 @@ pnpm start
 
 普通用户可直接选择对应平台下载：
 
-- Windows x64：[下载安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v1.0.0/Santu-Infinite-Canvas-1.0.0-Windows-setup.exe)。退出软件后运行安装器，沿用已有安装目录覆盖更新，保留用户数据。
-- Apple 芯片 macOS：[下载 PKG 安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v1.0.0/Santu-Infinite-Canvas-1.0.0-arm64.pkg)。退出软件后运行安装器，固定覆盖“应用程序”里的旧版，同版本也可覆盖，保留用户数据。此 PKG 尚未进行 Developer ID 签名与 Apple 公证。
+- Windows x64：[下载安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu-Infinite-Canvas-0.5.0-Windows-setup.exe)。退出软件后运行安装器，沿用已有安装目录覆盖更新，保留用户数据。
+- Apple 芯片 macOS：[下载 PKG 安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu-Infinite-Canvas-0.5.0-arm64.pkg)。退出软件后运行安装器，固定覆盖“应用程序”里的旧版，同版本也可覆盖，保留用户数据。此 PKG 尚未进行 Developer ID 签名与 Apple 公证。
 
 打包应用已包含运行所需环境，不需要另外安装 Node.js、pnpm，也不需要启动脚本。
 
