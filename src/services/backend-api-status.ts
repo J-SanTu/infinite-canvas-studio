@@ -1,6 +1,9 @@
 export type ApiCapability = "image" | "text" | "video" | "audio" | "music" | "tinify";
 
 export type LocalApiConfig = {
+    id?: string;
+    channels?: LocalApiConfig[];
+    textProtocol?: "chat" | "responses";
     capability: ApiCapability;
     configured: boolean;
     name: string;
@@ -8,6 +11,10 @@ export type LocalApiConfig = {
     apiFormat: "openai" | "gemini";
     apiKeyFingerprint: string;
     models: string[];
+    availableModels: string[];
+    modelsStatus: "ready" | "error" | "unverified" | "not_required";
+    modelsError: string;
+    modelsFetchedAt: string;
     updatedAt: string;
 };
 
@@ -18,11 +25,19 @@ export async function fetchLocalApiSettings() {
     return data.apis;
 }
 
-export async function updateLocalApiSetting(capability: ApiCapability, input: { baseUrl?: string; apiKey?: string; apiFormat?: "openai" | "gemini"; models?: string[]; clear?: boolean }) {
+export async function updateLocalApiSetting(
+    capability: ApiCapability,
+    input: { channelId?: string; create?: boolean; name?: string; textProtocol?: "chat" | "responses"; baseUrl?: string; apiKey?: string; apiFormat?: "openai" | "gemini"; selectedModels?: string[]; clear?: boolean },
+) {
     const data = await requestJson<{ config: LocalApiConfig }>(`/api/settings/apis/${capability}`, {
         method: "PUT",
         body: JSON.stringify(input),
     });
+    return data.config;
+}
+
+export async function refreshLocalApiModels(capability: ApiCapability, channelId?: string) {
+    const data = await requestJson<{ config: LocalApiConfig }>(`/api/settings/apis/${capability}/models/refresh${channelId ? `?channelId=${encodeURIComponent(channelId)}` : ""}`, { method: "POST" });
     return data.config;
 }
 

@@ -69,7 +69,7 @@ export function AssetPickerModal({ open, onInsert, onInsertMany, onClose }: Prop
             role="dialog"
             aria-label="选择素材"
             data-canvas-no-zoom
-            className="absolute bottom-20 right-5 top-20 z-[85] flex w-[min(620px,calc(100%-40px))] flex-col overflow-hidden rounded-lg border shadow-2xl backdrop-blur"
+            className="absolute bottom-[220px] left-20 top-[76px] z-[85] flex w-[min(420px,calc(100%-100px))] flex-col overflow-hidden rounded-lg border shadow-2xl backdrop-blur"
             style={{ background: theme.toolbar.panel, borderColor: theme.toolbar.border, color: theme.node.text }}
             onPointerDown={(event) => event.stopPropagation()}
         >
@@ -85,7 +85,7 @@ export function AssetPickerModal({ open, onInsert, onInsertMany, onClose }: Prop
                 </div>
             ) : (
                 <>
-                    <div className="grid min-h-0 flex-1 grid-cols-[150px_minmax(0,1fr)]">
+                    <div className="grid min-h-0 flex-1 grid-cols-[110px_minmax(0,1fr)]">
                         <nav className="min-h-0 overflow-y-auto border-r p-2" style={{ borderColor: theme.toolbar.border }}>
                             <PickerFolder active={folderFilter === "all"} label="全部" count={assets.length} icon={<Images className="size-4" />} onClick={() => setFolderFilter("all")} />
                             <PickerFolder active={folderFilter === "unfiled"} label="未分类" count={assets.filter((asset) => !asset.folderId).length} icon={<FolderOpen className="size-4" />} onClick={() => setFolderFilter("unfiled")} />
@@ -108,7 +108,7 @@ export function AssetPickerModal({ open, onInsert, onInsertMany, onClose }: Prop
                             </div>
                             <div className="min-h-0 flex-1 overflow-y-auto p-3">
                                 {filtered.length ? (
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-2 gap-2">
                                         {filtered.map((asset) => {
                                             const selected = selectedIds.has(asset.id);
                                             const dragIds = selected && selectedIds.size ? Array.from(selectedIds) : [asset.id];

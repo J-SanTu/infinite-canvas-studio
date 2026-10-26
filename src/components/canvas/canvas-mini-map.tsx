@@ -8,8 +8,8 @@ export function Minimap({ nodes, viewport, viewportSize, onViewportChange }: { n
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const containerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const width = 240;
-    const height = 160;
+    const width = 200;
+    const height = 150;
 
     const { worldBounds, scale, offset } = useMemo(() => {
         if (!nodes.length) {
@@ -95,11 +95,12 @@ export function Minimap({ nodes, viewport, viewportSize, onViewportChange }: { n
     };
 
     return (
-        <div className="absolute bottom-24 left-6 z-50 overflow-hidden rounded-lg border shadow-2xl backdrop-blur-sm" style={{ width, height, background: theme.toolbar.panel, borderColor: theme.toolbar.border }}>
+        <div data-canvas-no-zoom onMouseDown={e=>e.stopPropagation()} className="absolute bottom-[62px] left-4 z-50 overflow-hidden rounded-[14px] border backdrop-blur-sm" style={{ width, height, background: theme.toolbar.panel, borderColor: theme.toolbar.border }}>
             <div
                 ref={containerRef}
                 className="relative h-full w-full cursor-crosshair"
                 onPointerDown={(event) => {
+                    event.stopPropagation();
                     event.preventDefault();
                     event.currentTarget.setPointerCapture(event.pointerId);
                     setIsDragging(true);
@@ -113,7 +114,7 @@ export function Minimap({ nodes, viewport, viewportSize, onViewportChange }: { n
             >
                 {nodes.map((node) => {
                     const pos = toMinimap(node.position.x, node.position.y);
-                    const color = node.type === CanvasNodeType.Image ? "#10b981" : node.type === CanvasNodeType.Video ? "#f97316" : node.type === CanvasNodeType.Audio ? "#a855f7" : node.type === CanvasNodeType.Config ? "#60a5fa" : node.type === CanvasNodeType.Group ? "#94a3b8" : theme.node.muted;
+                    const color = "#737379";
                     return (
                         <div
                             key={node.id}

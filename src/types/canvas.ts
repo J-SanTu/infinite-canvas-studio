@@ -1,3 +1,6 @@
+import type { SkillSnapshot } from "@/lib/canvas/chat-skills";
+import type { ChatProposal, ChatPlan } from "@/lib/canvas/canvas-chat";
+
 export type Position = {
     x: number;
     y: number;
@@ -25,8 +28,10 @@ export type CanvasGenerationMode = "text" | "image" | "video" | "audio";
 export type CanvasImageGenerationType = "generation" | "edit";
 
 export type CanvasNodeMetadata = {
+    chatSvg?: { storageKey: string; colors: string[] };
+    chatPlanId?: string;
     creativeRatioApproval?: string;
-    creative?: { requirements: string; url: string; ratio: string; description: string; copies: {role: string; text: string}[]; roles: Record<string, string>; generatedInput?: string };
+    creative?: { modelRevision?: string; model?: string; requirements: string; url: string; ratio: string; description: string; copies: {role: string; text: string}[]; roles: Record<string, string>; generatedInput?: string };
     content?: string;
     composerContent?: string;
     prompt?: string;
@@ -36,6 +41,7 @@ export type CanvasNodeMetadata = {
     fontSize?: number;
     generationMode?: CanvasGenerationMode;
     generationType?: CanvasImageGenerationType;
+    modelRevision?: string;
     model?: string;
     size?: string;
     quality?: string;
@@ -67,6 +73,8 @@ export type CanvasNodeMetadata = {
     bytes?: number;
     durationMs?: number;
     groupId?: string;
+    stackId?: string;
+    isPile?: boolean;
     directorProjectId?: string;
     directorRunId?: string;
     previewAssetId?: string;
@@ -97,6 +105,8 @@ export type CanvasAssistantReference = {
     dataUrl?: string;
     storageKey?: string;
     text?: string;
+    mimeType?: string;
+    svg?: { storageKey: string; colors: string[] };
 };
 
 export type CanvasAssistantImage = {
@@ -107,6 +117,7 @@ export type CanvasAssistantImage = {
 };
 
 export type CanvasAssistantMessage = {
+    skills?: SkillSnapshot[];
     id: string;
     role: "user" | "assistant" | "system" | "tool" | "error";
     title?: string;
@@ -114,9 +125,17 @@ export type CanvasAssistantMessage = {
     meta?: string;
     detail?: unknown;
     references?: CanvasAssistantReference[];
+    proposals?: ChatProposal[];
+    plans?: ChatPlan[];
 };
 
 export type CanvasAssistantSession = {
+    skillIds?: string[];
+    titleEdited?: boolean;
+    imageModelRevision?: string;
+    modelRevision?: string;
+    model?: string;
+    imageModel?: string;
     id: string;
     title: string;
     messages: CanvasAssistantMessage[];

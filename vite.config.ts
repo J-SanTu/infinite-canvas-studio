@@ -20,14 +20,14 @@ const providerProxy = {
     rewrite: (path: string) => path.replace(new RegExp(`^${APP_API_PROXY_PREFIX}`), ""),
 };
 const backendProxy = {
-    target: process.env.BACKEND_URL || "http://127.0.0.1:5202",
+    target: process.env.BACKEND_URL || "http://127.0.0.1:5302",
     changeOrigin: true,
     secure: false,
 };
 
 export default defineConfig({
     root: webDir,
-    cacheDir: process.env.VITE_CACHE_DIR || resolve(webDir, "node_modules/.vite"),
+    cacheDir: process.env.VITE_CACHE_DIR || resolve(webDir, ".cache/vite"),
     publicDir: resolve(webDir, "public"),
     base: process.env.VITE_BASE || "/",
     plugins: [react()],

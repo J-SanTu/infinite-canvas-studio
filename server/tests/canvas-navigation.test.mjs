@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import test from 'node:test';
+const root=await mkdtemp(join(tmpdir(),'santu-nav-'));
+process.env.CANVAS_DB_PATH=join(root,'db.json');
+process.env.CANVAS_ASSET_CHANGE_DB_PATH=join(root,'asset.sqlite');
+const {startServer,stopServer}=await import('../../server.js');
+test('navigation persists across server ports and partial updates preserve templates',async()=>{
+ let server=await startServer({port:0,host:'127.0.0.1'});
+ const templates=[{id:'qa',title:'persistent',nodes:[],connections:[]}];
+ const put=async(body)=>{const r=await fetch(server.url+'/api/canvas/navigation',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(r.status,200);};
+ await put({templates}); await put({snapToGrid:true,hideConnections:false});
+ await stopServer();server=await startServer({port:0,host:'127.0.0.1'});
+ const saved=await fetch(server.url+'/api/canvas/navigation').then(r=>r.json());
+ assert.deepEqual(saved,{templates,snapToGrid:true,hideConnections:false});
+ assert.deepEqual(JSON.parse(await readFile(process.env.CANVAS_DB_PATH,'utf8')).canvasNavigation,saved);
+ await stopServer();await rm(root,{recursive:true,force:true});
+});

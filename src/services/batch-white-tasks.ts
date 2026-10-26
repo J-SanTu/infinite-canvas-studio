@@ -1,3 +1,4 @@
+import { recordDiagnostic } from "@/services/diagnostics";
 import localforage from "localforage";
 import type { AiConfig } from "@/stores/use-config-store";
 import { useConfigStore } from "@/stores/use-config-store";
@@ -36,7 +37,9 @@ export function persistTask(task: StoredTask) {
         .then(async () => {
             await batchStore.setItem(`task:${task.id}`, task);
             await summaryStore.setItem(task.id, summarize(task));
+            recordDiagnostic("batch.saved", { projectId: task.id, count: task.items.length });
         });
+    void operation.catch((error: unknown) => recordDiagnostic("batch.save.error", { projectId: task.id, error: error instanceof Error ? error.message : String(error) }, "error"));
     saveQueue = operation;
     return operation;
 }
@@ -84,6 +87,7 @@ export async function removeTask(id: string) {
     await saveQueue;
     await summaryStore.removeItem(id);
     await batchStore.removeItem(`task:${id}`);
+    recordDiagnostic("batch.deleted", { projectId: id });
 }
 let migration: Promise<void> | undefined;
 export function migrateTinifyKey() {
@@ -102,10 +106,12 @@ export function migrateTinifyKey() {
 export async function executeBatch(task: StoredTask, config: AiConfig, ids: string[], compressionOnly = false) {
     if (busy) throw new Error("已有批量任务正在后台处理，请等待完成");
     busy = true;
+    recordDiagnostic("batch.started", { projectId: task.id, count: ids.length, action: compressionOnly ? "compress" : "generate" });
     let current = { ...task, items: task.items.map((item) => (ids.includes(item.id) ? { ...item, status: "waiting" as const, stage: "排队中" } : item)) };
     liveTasks.set(task.id, current);
     notify();
     const update = async (id: string, patch: Partial<Item>) => {
+        recordDiagnostic("batch.item", { projectId: task.id, operationId: id, status: patch.status, action: patch.stage, error: patch.error }, patch.error ? "warn" : "info");
         current = { ...current, updatedAt: Date.now(), items: current.items.map((item) => (item.id === id ? { ...item, ...patch } : item)) };
         liveTasks.set(task.id, current);
         notify();

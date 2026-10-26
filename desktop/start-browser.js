@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 const { startServer, stopServer } = await import("../server.js");
 
 try {
-    const local = await startServer({ port: Number(process.env.PORT || 5200), host: "127.0.0.1" });
+    const local = await startServer({ port: Number(process.env.PORT || 5300), host: "127.0.0.1" });
     openBrowser(local.url);
     console.log("Keep this window open. Press Ctrl+C to stop.");
 } catch (error) {

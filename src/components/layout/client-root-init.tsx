@@ -7,7 +7,7 @@ import { CanvasBackendSync } from "@/components/layout/canvas-backend-sync";
 import { AssetBackendSync } from "@/components/layout/asset-backend-sync";
 import { PromptLibrarySessionSync } from "@/components/layout/prompt-library-session-sync";
 import { useConfigStore } from "@/stores/use-config-store";
-import { fetchLocalApiSettings } from "@/services/backend-api-status";
+import { fetchLocalApiSettings, refreshLocalApiModels, type ApiCapability } from "@/services/backend-api-status";
 import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
 import { useAssetStore } from "@/stores/use-asset-store";
 
@@ -24,8 +24,26 @@ export function ClientRootInit({ children }: { children: ReactNode }) {
         if (cacheClearMode || checkedFirstRun.current) return;
         checkedFirstRun.current = true;
         void fetchLocalApiSettings()
-            .then((settings) => {
-                if (Object.values(settings).some((item) => item.configured) || window.location.pathname === "/config") return;
+            .then(async (settings) => {
+                useConfigStore.getState().syncApiModels(settings);
+                const legacy = Object.values(settings)
+                    .flatMap((group) => group.channels || [group])
+                    .filter((item) => item.configured && item.modelsStatus === "unverified");
+                if (legacy.length) {
+                    await Promise.all(
+                        legacy.map(async (item) => {
+                            try {
+                                return await refreshLocalApiModels(item.capability as ApiCapability, item.id);
+                            } catch {
+                                return item;
+                            }
+                        }),
+                    );
+                    const latest = await fetchLocalApiSettings();
+                    useConfigStore.getState().syncApiModels(latest);
+                    message.info("API 模型列表已更新，请到设置中确认默认模型；获取失败的 API 可手动刷新");
+                }
+                if (Object.values(settings).some((item) => item.configured || item.channels?.some((channel) => channel.configured)) || window.location.pathname === "/config") return;
                 window.location.replace("/config?firstRun=1");
             })
             .catch(() => undefined);

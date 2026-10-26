@@ -1,3 +1,7 @@
+import { readDb, updateDb } from "./server/lib/store.js";
+import { listChatSkills, saveChatSkill, deleteChatSkill } from "./server/lib/chat-skills.js";
+import { handleDiagnostics, traceRequest, setDiagnosticDirectoryOpener } from "./server/lib/diagnostic-http.js";
+import { logEvent } from "./server/lib/diagnostic-log.js";
 import { readProductPage } from "./server/lib/creative-product-page.js";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
@@ -31,9 +35,11 @@ const distDir = resolve(process.env.CANVAS_DIST_PATH || resolve(rootDir, "dist")
 const maxBodyBytes = 80 * 1024 * 1024;
 
 const server = createServer(async (req, res) => {
+    traceRequest(req, res);
     try {
         if (!req.url) return sendJson(res, 404, { error: "接口不存在", code: "route_not_found", path: "" });
         const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+        if (await handleDiagnostics(req, res, url.pathname)) return;
         if (!url.pathname.startsWith("/api/")) return serveStatic(req, res, url.pathname);
 
         if (req.method === "GET" && url.pathname === "/api/health") {
@@ -41,6 +47,11 @@ const server = createServer(async (req, res) => {
         }
 
         const user = localWorkspace;
+        if (url.pathname === "/api/chat-skills" && req.method === "GET") return sendJson(res, 200, await listChatSkills());
+        if (url.pathname === "/api/chat-skills" && req.method === "POST") return sendJson(res, 201, await saveChatSkill(await readJson(req)));
+        const skillMatch = url.pathname.match(/^\/api\/chat-skills\/([^/]+)$/);
+        if (skillMatch && req.method === "PUT") return sendJson(res, 200, await saveChatSkill(await readJson(req), decodeURIComponent(skillMatch[1])));
+        if (skillMatch && req.method === "DELETE") return sendJson(res, 200, await deleteChatSkill(decodeURIComponent(skillMatch[1]), Number(url.searchParams.get("version"))));
 
         if (req.method === "GET" && url.pathname === "/api/creative/product-page") {
             try { return sendJson(res, 200, await readProductPage(url.searchParams.get("url") || "")); }
@@ -51,6 +62,17 @@ const server = createServer(async (req, res) => {
             return sendJson(res, 200, { workspace: user });
         }
 
+        if (url.pathname === "/api/canvas/navigation" && req.method === "GET") {
+            return sendJson(res, 200, (await readDb()).canvasNavigation || {});
+        }
+        if (url.pathname === "/api/canvas/navigation" && req.method === "PUT") {
+            const input = await readJson(req);
+            const patch = {};
+            if (Array.isArray(input.templates)) patch.templates = input.templates;
+            if (typeof input.snapToGrid === "boolean") patch.snapToGrid = input.snapToGrid;
+            if (typeof input.hideConnections === "boolean") patch.hideConnections = input.hideConnections;
+            return sendJson(res, 200, await updateDb(db => (db.canvasNavigation = {...db.canvasNavigation, ...patch})));
+        }
         if (req.method === "GET" && url.pathname === "/api/settings/apis") {
             return sendJson(res, 200, { apis: await listLocalApiSettings() });
         }
@@ -61,6 +83,11 @@ const server = createServer(async (req, res) => {
 
         if (req.method === "PUT" && url.pathname === "/api/settings/preferences") {
             return sendJson(res, 200, { preferences: await updateUiPreferences(await readJson(req)) });
+        }
+
+        const modelRefreshMatch = url.pathname.match(/^\/api\/settings\/apis\/(image|text|video|audio|music)\/models\/refresh$/);
+        if (modelRefreshMatch && req.method === "POST") {
+            return sendJson(res, 200, { config: await updateLocalApiSetting(modelRefreshMatch[1], { channelId: url.searchParams.get("channelId") || undefined }) });
         }
 
         const apiSettingMatch = url.pathname.match(/^\/api\/settings\/apis\/(image|text|video|audio|music|tinify)$/);
@@ -284,12 +311,15 @@ const server = createServer(async (req, res) => {
 
         return sendJson(res, 404, { error: "接口不存在", code: "route_not_found", path: url.pathname });
     } catch (error) {
+        logEvent("error", "http.request.error", { requestId: req.diagnosticRequestId, error });
         const status = Number(error.statusCode || 500);
         return sendJson(res, status, { error: error instanceof Error ? error.message : "Server error", ...(error?.conflict ? { conflict: error.conflict } : {}) });
     }
 });
 
-export function startServer({ port = Number(process.env.PORT || process.env.BACKEND_PORT || 5200), host = process.env.HOST || process.env.BACKEND_HOST || "127.0.0.1" } = {}) {
+export function startServer({ openLogDirectory = null, port = Number(process.env.PORT || process.env.BACKEND_PORT || 5200), host = process.env.HOST || process.env.BACKEND_HOST || "127.0.0.1" } = {}) {
+    setDiagnosticDirectoryOpener(openLogDirectory);
+    logEvent("info", "server.start", { host, port, node: process.versions.node, platform: process.platform, arch: process.arch });
     return new Promise((resolveStart, rejectStart) => {
         const onError = (error) => {
             server.off("listening", onListening);
@@ -316,6 +346,7 @@ export function stopServer() {
 }
 
 function sendJson(res, status, body) {
+    if (status >= 400) logEvent("warn", "http.response.error", { requestId: res.getHeader("X-Canvas-Request-Id"), status, error: body?.error, code: body?.code });
     res.statusCode = status;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");

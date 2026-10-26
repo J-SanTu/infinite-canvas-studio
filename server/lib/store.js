@@ -58,6 +58,7 @@ function normalizeDb(source) {
     return {
         users: [{ ...localWorkspace }],
         sessions: [],
+        chatSkills: Array.isArray(source.chatSkills) ? source.chatSkills : [],
         canvasProjects: localizeRows(source.canvasProjects),
         storageObjects: localizeRows(source.storageObjects),
         assets: localizeRows(source.assets),
@@ -71,6 +72,7 @@ function normalizeDb(source) {
         assetLibraryChanges: localizeRows(source.assetLibraryChanges),
         modelCatalog: Array.isArray(source.modelCatalog) ? source.modelCatalog : [],
         directorProjects: localizeRows(source.directorProjects),
+        canvasNavigation: source.canvasNavigation && typeof source.canvasNavigation === "object" ? source.canvasNavigation : {},
         uiPreferences: source.uiPreferences && typeof source.uiPreferences === "object" ? source.uiPreferences : {},
         apiConfigs: source.apiConfigs && typeof source.apiConfigs === "object" ? source.apiConfigs : migrateLegacyApiConfigs(source.backendApi || legacyTenantConfigs[0] || null, legacyUsers),
     };

@@ -46,14 +46,8 @@ if [ ! -d "node_modules" ]; then
   run_package_manager install
 fi
 
-if [ ! -f "dist/index.html" ]; then
-  echo "Building the application..."
-  if [ -z "$PACKAGE_MANAGER" ]; then
-    echo "pnpm, npm, or corepack is required to build the application."
-    exit 1
-  fi
-  run_package_manager build
-fi
+echo "Building the current source version..."
+node node_modules/vite/bin/vite.js build
 
 URL="http://127.0.0.1:$PORT"
 echo "Santu Infinite Canvas is starting at $URL"

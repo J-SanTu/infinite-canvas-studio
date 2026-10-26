@@ -1,6 +1,6 @@
 {
     "name": "santu-infinite-canvas",
-    "version": "0.5.0",
+    "version": "1.0.0",
     "description": "Local-first single-user AI creation workspace with an infinite canvas.",
     "author": "Santu Infinite Canvas contributors",
     "private": true,
@@ -11,7 +11,7 @@
         "node": ">=24"
     },
     "scripts": {
-        "dev": "vite --host 0.0.0.0 --port 5200 --strictPort",
+        "dev": "vite --host 127.0.0.1 --port 5300 --strictPort",
         "dev:backend": "node --disable-warning=ExperimentalWarning desktop/start-dev-backend.js",
         "test:local": "node --test server/tests/local-workspace-http.test.mjs",
         "test:canvas-performance": "node server/tests/canvas-performance.test.mjs",
@@ -27,7 +27,8 @@
         "pack:win:zip": "vite build && electron-builder --win zip --x64 --publish never --config.directories.output=Windows",
         "pack:mac": "vite build && electron-builder --mac dir --arm64 --publish never --config.directories.output=.build.noindex/mac && bash desktop/build-mac-installer.sh",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "test:chat": "node --test server/tests/canvas-chat.test.mjs"
     },
     "dependencies": {
         "@ant-design/icons": "^6.1.1",

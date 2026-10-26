@@ -1,23 +1,20 @@
-# 安装包更新与 GitHub 交付
+# Santu Infinite Canvas 1.0.0 正式版
 
-版本保持 0.5.0，同版本修复更新现有 Release，不新增版本报告。
+相较当前正式版 0.5.1，1.0 正式版整合了 8 个方向、24 项功能与体验升级，重点改善画布 AI 协作、多模型配置和大量参考图的整理体验。
 
-## 打包
+- **直接在画布中与 AI 协作**：引用节点开展多轮对话，确认方案后创建或修改内容；支持拖拽图片和文本作为对话参考。
+- **从素材到方案再到生成**：支持图片与 SVG 素材、方案卡选择，以及失败重试和工作流恢复。
+- **灵活配置模型和 API**：多个渠道同时保存，文字与图片模型独立选择；支持搜索、批量勾选并统一应用，刷新不会自动选中新模型。
+- **复用自己的技能**：创建、导入和管理本地技能，按会话绑定创作规则与参考资料。
+- **更紧凑地整理参考图**：批量导入采用网格布局，支持多选布局和堆叠组合；组合封面缩小，原图清晰度保留。
+- **更方便地查找和复用内容**：完善中文搜索、素材库、模板、历史定位、小地图和吸附；修复模板与吸附设置重启后丢失及侧栏高亮问题。
+- **正式版覆盖更新**：Mac 固定覆盖正式版应用，Windows 沿用正式版安装身份；保留正式版数据，Beta 数据目录保持独立。
 
-- Windows：`pnpm pack:win`，产物 `Windows/Santu-Infinite-Canvas-0.5.0-Windows-setup.exe`。
-- Apple 芯片 Mac：`pnpm pack:mac`，产物 `macOS/Santu-Infinite-Canvas-0.5.0-arm64.pkg`。
-- 中间产物放在 `.build.noindex`；安装文件和用户数据均不提交到 Git。
-- Windows ZIP 可使用 `pnpm pack:win:zip` 另行生成；它不支持固定位置覆盖安装。
+## 安装与验证说明
 
-## 更新行为
-
-Mac PKG 固定覆盖 /Applications/Santu Infinite Canvas.app，备份旧应用并保留用户数据。Windows 安装版复用现有安装目录，保持应用标识和快捷方式名称，保留用户数据。安装前退出软件。任意目录中的 ZIP 解压副本不会被自动清理。
-
-## 上传顺序
-
-1. 检查目标仓库 J-SanTu/infinite-canvas-studio 和已有 v0.5.0。
-2. 逐个上传安装包；等待完成，核验附件状态、字节数和 SHA256。只重试未完成文件。
-3. 用 API 返回的 browser_download_url 更新 README.md 及 README.zh-CN.md，包含 README 中内嵌的中文段落。
-4. 推送审核后的源码，更新源码 ZIP；确认远程 main 和下载链接。
-
-详情见 [GitHub 上传规则](docs/GitHub上传规则.md)。Mac 当前 PKG 未进行 Developer ID Installer 签名或 Apple 公证。Windows 包编译和内容检查通过不等于实机安装验证。
+- macOS Apple Silicon：下载 PKG，退出旧正式版后运行，安装至 `/Applications/Santu Infinite Canvas.app`。
+- Windows x64：下载 Windows setup.exe，退出旧正式版后覆盖安装。
+- 不自动合并 Beta 画布、素材或 API 配置到正式版。
+- 同时整合 0.5.1 的本地诊断日志、脱敏 ZIP 导出、模型发现与配置兼容改进。
+- 类型检查、生产构建、68 项自动回归通过。部分 API 回归使用模拟上游，不代表所有真实供应商验证。
+- Windows 完成构建与包内容检查，未进行 Windows 实机安装；Intel Mac 不包含在本次交付中。Mac 为本地签名，PKG 未经 Apple Developer ID 签名或公证。

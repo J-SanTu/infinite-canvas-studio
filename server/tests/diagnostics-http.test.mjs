@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { createServer } from 'node:http';
+import { unzipSync, strFromU8 } from 'fflate';
+const root=await mkdtemp(join(tmpdir(),'santu-diag-http-'));
+for(const [name,file] of Object.entries({CANVAS_DB_PATH:'app-db.json',CANVAS_STORAGE_PATH:'storage',CANVAS_SECRET_PATH:'api-secret.key',CANVAS_IMAGE_USAGE_DB_PATH:'usage.sqlite',CANVAS_IMAGE_USAGE_OUTBOX_PATH:'outbox.ndjson',CANVAS_ASSET_CHANGE_DB_PATH:'changes.sqlite',CANVAS_LOG_PATH:'logs'})) process.env[name]=join(root,file);
+const upstream=createServer((req,res)=>{if(req.url.includes('fail')) req.socket.destroy(); else {res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ok:true,path:req.url}));}});
+await new Promise(resolve=>upstream.listen(0,'127.0.0.1',resolve));
+const {startServer,stopServer}=await import('../../server.js');
+let opened=null;
+const local=await startServer({host:'127.0.0.1',port:0,openLogDirectory:async p=>{opened=p;}});
+const request=(path,method='GET',body)=>fetch(local.url+path,{method,headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});
+test.after(async()=>{await stopServer();await new Promise(resolve=>upstream.close(resolve));await rm(root,{recursive:true,force:true});});
+test('default gateway, old settings preserved, v1 not doubled, request failures have IDs and causes in export',async()=>{
+ const defaults=await request('/api/settings/apis').then(r=>r.json());
+ assert.equal(defaults.apis.image.baseUrl,'https://tokenhub.holdwellgroup.com/v1');
+ const baseUrl=`http://127.0.0.1:${upstream.address().port}/v1`;
+ assert.equal((await request('/api/settings/apis/text','PUT',{baseUrl,apiKey:'fixture-opaque-secret',models:['fixture-model']})).status,200);
+ const settings=await request('/api/settings/apis').then(r=>r.json());assert.equal(settings.apis.text.baseUrl,baseUrl);
+ const success=await fetch(local.url+'/api/ai/v1/models',{headers:{'X-Canvas-Capability':'text'}}).then(r=>r.json());assert.equal(success.path,'/v1/models');
+ const response=await fetch(local.url+'/api/ai/v1/fail',{headers:{'X-Canvas-Capability':'text'}});
+ assert.equal(response.status,502);const failure=await response.json();assert.ok(failure.requestId);assert.match(failure.error,/请求编号/);
+ const archive=unzipSync(new Uint8Array(await (await request('/api/diagnostics/export')).arrayBuffer()));
+ const text=Object.values(archive).map(strFromU8).join('\n');assert.match(text,/upstream.request.error/);assert.match(text,/UND_ERR_SOCKET/);assert.ok(text.includes(failure.requestId));assert.doesNotMatch(text,/fixture-opaque-secret/);
+});
+test('renderer events persist, folder opens exact log directory, hostile origins rejected',async()=>{
+ const r=await request('/api/diagnostics/events','POST',{events:[{event:'ui.click',eventId:'test-event',action:'save',apiKey:'never-include',value:'private-value'}]});assert.equal(r.status,200);
+ assert.equal((await request('/api/diagnostics/open','POST')).status,200);assert.equal(opened,join(root,'logs'));
+ const status=await request('/api/diagnostics').then(r=>r.json());assert.ok(status.files.length);assert.equal(status.lastError,null);
+ const hostile=await fetch(local.url+'/api/diagnostics/export',{headers:{Origin:'https://evil.example'}});assert.equal(hostile.status,403);
+ assert.equal((await request('/api/diagnostics/events','POST',{events:new Array(51).fill({event:'x'})})).status,400);
+ const text=Object.values(unzipSync(new Uint8Array(await (await request('/api/diagnostics/export')).arrayBuffer()))).map(strFromU8).join('\n');assert.match(text,/renderer.ui.click/);assert.doesNotMatch(text,/never-include|private-value/);
+});

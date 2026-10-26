@@ -1,3 +1,4 @@
+import { logEvent } from "./diagnostic-log.js";
 import { createId, readDb, updateDb } from "./store.js";
 import { deleteAssetChangeRecords, initializeAssetChangeRepository } from "./asset-change-repository.js";
 
@@ -17,7 +18,7 @@ export async function getCanvasBootstrap(userId) {
 
 export async function pushCanvasProjects(userId, projects) {
     if (!Array.isArray(projects)) throw badRequest("projects 必须是数组");
-    return updateDb((db) => {
+    const result = await updateDb((db) => {
         const now = new Date().toISOString();
         const saved = [];
 
@@ -57,6 +58,8 @@ export async function pushCanvasProjects(userId, projects) {
 
         return { saved };
     });
+    for (const project of result.saved) logEvent("info", "project.saved", { projectId: project.localProjectId, version: project.version });
+    return result;
 }
 
 export async function clearCanvasCache(userId) {

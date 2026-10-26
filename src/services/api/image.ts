@@ -251,10 +251,17 @@ async function normalizeImagesToRequestedSize(images: Array<{ id: string; dataUr
     const selected = context?.config.size;
     if (selected?.includes(":")) {
         const ratio = parseRatioValue(selected);
-        let w = Math.round(ratio.width * 10000), h = Math.round(ratio.height * 10000);
-        let a = w, b = h;
-        while (b) { const rest = a % b; a = b; b = rest; }
-        w /= a; h /= a;
+        let w = Math.round(ratio.width * 10000),
+            h = Math.round(ratio.height * 10000);
+        let a = w,
+            b = h;
+        while (b) {
+            const rest = a % b;
+            a = b;
+            b = rest;
+        }
+        w /= a;
+        h /= a;
         const multiple = Math.max(1, Math.floor(Math.max(target.width, target.height) / Math.max(w, h)));
         target.width = w * multiple;
         target.height = h * multiple;
@@ -799,13 +806,7 @@ export async function requestAiSuperResolution(config: AiConfig, dataUrl: string
     const sourceData = await imageToDataUrl({ dataUrl });
     const formData = new FormData();
     formData.set("model", requestConfig.model);
-    formData.set(
-        "prompt",
-        withSystemPrompt(
-            requestConfig,
-            `对输入图片进行 AI 超分辨率重建，输出严格为 ${width}x${height} 像素 PNG。保持原图宽高比、主体、构图、文字、材质、光线和颜色，不新增或删除内容，只补足真实细节。${prompt?.trim() || ""}`,
-        ),
-    );
+    formData.set("prompt", withSystemPrompt(requestConfig, `对输入图片进行 AI 超分辨率重建，输出严格为 ${width}x${height} 像素 PNG。保持原图宽高比、主体、构图、文字、材质、光线和颜色，不新增或删除内容，只补足真实细节。${prompt?.trim() || ""}`));
     formData.set("n", "1");
     formData.set("quality", "high");
     // The image API has a smaller pixel budget than the final 8K export.
@@ -832,6 +833,71 @@ export async function requestAiSuperResolution(config: AiConfig, dataUrl: string
     }
 }
 
+async function requestChatCompletion(config: AiConfig, messages: AiTextMessage[], onDelta: (text: string) => void, options?: RequestOptions) {
+    const response = await fetch(aiApiUrl(config, "/chat/completions"), {
+        method: "POST",
+        headers: aiHeaders(config, "application/json"),
+        body: JSON.stringify({ model: config.model, messages: withSystemMessage(config, messages), stream: true }),
+        signal: options?.signal,
+    });
+    if (!response.ok) throw new Error(await readFetchError(response, "请求失败"));
+    if (!(response.headers.get("content-type") || "").includes("text/event-stream")) {
+        const payload = await response.json();
+        if (payload.error) throw new Error(payload.error.message || "上游返回错误");
+        const content = payload.choices?.[0]?.message?.content;
+        if (typeof content !== "string" || !content.trim()) throw new Error("模型没有返回文本内容");
+        onDelta(content);
+        return content;
+    }
+    if (!response.body) throw new Error("上游未返回响应内容");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "",
+        content = "",
+        finished = false;
+    const consume = (block: string) => {
+        const data = block
+            .split(/\r?\n/)
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trim())
+            .join("\n");
+        if (!data) return;
+        if (data === "[DONE]") {
+            finished = true;
+            return;
+        }
+        const event = JSON.parse(data);
+        if (event.error) throw new Error(event.error.message || "上游返回错误");
+        if (event.choices?.[0]?.finish_reason) finished = true;
+        const delta = event.choices?.[0]?.delta?.content;
+        if (typeof delta === "string") {
+            content += delta;
+            onDelta(content);
+        }
+    };
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
+            let match;
+            while ((match = /\r?\n\r?\n/.exec(buffer))) {
+                consume(buffer.slice(0, match.index));
+                buffer = buffer.slice(match.index + match[0].length);
+            }
+            if (done) {
+                if (buffer.trim()) consume(buffer);
+                break;
+            }
+        }
+        if (!finished) throw new Error("模型响应中断，请重试");
+        if (!content.trim()) throw new Error("模型没有返回文本内容");
+        return content;
+    } finally {
+        await reader.cancel().catch(() => undefined);
+        reader.releaseLock();
+    }
+}
+
 export async function requestImageQuestion(config: AiConfig, messages: AiTextMessage[], onDelta: (text: string) => void, options?: RequestOptions) {
     const requestConfig = resolveModelRequestConfig(config, config.model || config.textModel);
     try {
@@ -840,6 +906,7 @@ export async function requestImageQuestion(config: AiConfig, messages: AiTextMes
             if (answer === "没有返回内容") onDelta(answer);
             return answer;
         }
+        if (requestConfig.textProtocol === "chat") return requestChatCompletion(requestConfig, messages, onDelta, options);
         const answer =
             (
                 await requestStreamingResponse(

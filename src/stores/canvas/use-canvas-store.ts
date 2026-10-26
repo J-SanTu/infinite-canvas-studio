@@ -1,3 +1,4 @@
+import { recordDiagnostic } from "@/services/diagnostics";
 import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
 
@@ -61,7 +62,10 @@ const canvasStorage: PersistStorage<CanvasStore> = {
             if (!pending) return;
             const serialized = JSON.stringify(pending.value);
             writeCanvasStoreMirror(serialized);
-            void localForageStorage.setItem(pending.name, serialized);
+            void Promise.resolve(localForageStorage.setItem(pending.name, serialized)).then(
+                () => recordDiagnostic("canvas.cache.saved", { count: pending.value.state.projects.length }),
+                (error: unknown) => recordDiagnostic("canvas.cache.error", { error: error instanceof Error ? error.message : String(error) }, "error"),
+            );
         }, 400);
     },
     removeItem: (name) => {
@@ -87,7 +91,8 @@ function writeCanvasStoreMirror(value: string) {
     if (typeof window === "undefined") return;
     try {
         window.localStorage.setItem(CANVAS_STORE_MIRROR_KEY, value);
-    } catch {
+    } catch (error) {
+        recordDiagnostic("canvas.mirror.error", { error: error instanceof Error ? error.message : String(error) }, "warn");
         // IndexedDB remains the primary cache when the synchronous mirror is unavailable.
     }
 }

@@ -1,12 +1,14 @@
+import type { LocalApiSettings } from "@/services/backend-api-status";
 import { useMemo } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
-import { APP_API_PROXY_PREFIX, APP_AUDIO_MODEL, APP_BASE_URL, APP_DEFAULT_MODELS, APP_IMAGE_MODELS, APP_IMAGE_MODEL, APP_TEXT_MODEL, APP_VIDEO_MODEL } from "@/config/app-config";
+import { APP_API_PROXY_PREFIX, APP_BASE_URL } from "@/config/app-config";
 
 export type ApiCallFormat = "openai" | "gemini";
 
 export type ModelChannel = {
+    textProtocol?: "chat" | "responses";
     id: string;
     name: string;
     baseUrl: string;
@@ -15,7 +17,11 @@ export type ModelChannel = {
     models: string[];
 };
 
+export type DefaultModels = Pick<AiConfig, "imageModel" | "textModel" | "videoModel" | "audioModel">;
+
 export type AiConfig = {
+    textProtocol?: "chat" | "responses";
+    defaultModelsRevision?: string;
     channelMode: "remote" | "local";
     baseUrl: string;
     apiKey: string;
@@ -47,7 +53,7 @@ export type AiConfig = {
     tinifyApiKey: string;
 };
 
-export type ConfigTabKey = "apis" | "models" | "preferences";
+export type ConfigTabKey = "apis" | "models" | "preferences" | "diagnostics";
 
 export const CONFIG_STORE_KEY = "infinite-canvas:ai_config_store";
 export type ModelCapability = "image" | "video" | "text" | "audio";
@@ -70,14 +76,14 @@ export const defaultConfig: AiConfig = {
             baseUrl: BACKEND_API_BASE_URL,
             apiKey: BACKEND_API_KEY_PLACEHOLDER,
             apiFormat: "openai",
-            models: APP_DEFAULT_MODELS,
+            models: [],
         },
     ],
-    model: `${BACKEND_API_CHANNEL_ID}::${APP_IMAGE_MODEL}`,
-    imageModel: `${BACKEND_API_CHANNEL_ID}::${APP_IMAGE_MODEL}`,
-    videoModel: `${BACKEND_API_CHANNEL_ID}::${APP_VIDEO_MODEL}`,
-    textModel: `${BACKEND_API_CHANNEL_ID}::${APP_TEXT_MODEL}`,
-    audioModel: `${BACKEND_API_CHANNEL_ID}::${APP_AUDIO_MODEL}`,
+    model: "",
+    imageModel: "",
+    videoModel: "",
+    textModel: "",
+    audioModel: "",
     audioVoice: "alloy",
     audioFormat: "mp3",
     audioSpeed: "1",
@@ -87,11 +93,11 @@ export const defaultConfig: AiConfig = {
     videoGenerateAudio: "true",
     videoWatermark: "false",
     systemPrompt: "",
-    models: APP_DEFAULT_MODELS.map((model) => `${BACKEND_API_CHANNEL_ID}::${model}`),
-    imageModels: APP_IMAGE_MODELS.map((model) => `${BACKEND_API_CHANNEL_ID}::${model}`),
-    videoModels: [`${BACKEND_API_CHANNEL_ID}::${APP_VIDEO_MODEL}`],
-    textModels: [`${BACKEND_API_CHANNEL_ID}::${APP_TEXT_MODEL}`],
-    audioModels: [`${BACKEND_API_CHANNEL_ID}::${APP_AUDIO_MODEL}`],
+    models: [],
+    imageModels: [],
+    videoModels: [],
+    textModels: [],
+    audioModels: [],
     quality: "low",
     size: "1:1",
     count: "1",
@@ -104,6 +110,8 @@ type ConfigStore = {
     isConfigOpen: boolean;
     configTab: ConfigTabKey;
     shouldPromptContinue: boolean;
+    saveDefaultModels: (models: DefaultModels) => void;
+    syncApiModels: (settings: LocalApiSettings) => void;
     updateConfig: <K extends keyof AiConfig>(key: K, value: AiConfig[K]) => void;
     isAiConfigReady: (config: AiConfig, model: string) => boolean;
     openConfigDialog: (shouldPromptContinue?: boolean, tab?: ConfigTabKey) => void;
@@ -166,7 +174,7 @@ function modelListKey(capability: ModelCapability) {
 
 function isAiConfigReady(config: AiConfig, model: string) {
     const channel = resolveModelChannel(config, model);
-    return Boolean(model.trim() && channel.baseUrl.trim() && channel.apiKey.trim());
+    return Boolean(model.trim() && channel.models.includes(modelOptionName(model)) && channel.baseUrl.trim() && channel.apiKey.trim());
 }
 
 export const useConfigStore = create<ConfigStore>()(
@@ -181,8 +189,53 @@ export const useConfigStore = create<ConfigStore>()(
                     config: {
                         ...state.config,
                         [key]: value,
+                        ...(key === "imageModel" ? { model: value as string } : {}),
                     },
                 })),
+            saveDefaultModels: (models) => {
+                const current = get().config;
+                for (const capability of ["image", "text", "video", "audio"] as const) {
+                    const value = models[`${capability}Model`];
+                    if (value && !selectableModelsByCapability(current, capability).includes(value)) throw new Error("所选模型已不可用，请刷新列表后重新选择。");
+                }
+                set({ config: { ...current, ...models, model: models.imageModel, defaultModelsRevision: nanoid() } });
+            },
+            syncApiModels: (settings) =>
+                set((state) => {
+                    const capabilities = ["image", "text", "video", "audio"] as const;
+                    const channels = Object.entries(settings).flatMap(([capability, group]) =>
+                        capability === "tinify"
+                            ? []
+                            : (group.channels || [{ ...group, id: `${capability}-default` }]).map((item) =>
+                                  createModelChannel({
+                                      id: item.id || `${capability}-default`,
+                                      name: item.name,
+                                      baseUrl: `${BACKEND_API_BASE_URL}/channels/${item.id || `${capability}-default`}`,
+                                      apiKey: BACKEND_API_KEY_PLACEHOLDER,
+                                      apiFormat: item.apiFormat,
+                                      textProtocol: item.textProtocol || "responses",
+                                      models: item.models,
+                                  }),
+                              ),
+                    );
+                    // Keep legacy node references bound to the original default slots only.
+                    channels.push(
+                        createModelChannel({ id: BACKEND_API_CHANNEL_ID, name: "原默认渠道", baseUrl: BACKEND_API_BASE_URL, apiKey: BACKEND_API_KEY_PLACEHOLDER, models: uniqueRawModels(Object.values(settings).flatMap((group) => group.models)) }),
+                    );
+                    const next = { ...state.config, channels, models: modelOptionsFromChannels(channels.filter((channel) => channel.id !== BACKEND_API_CHANNEL_ID)) };
+                    for (const capability of capabilities) {
+                        const group = settings[capability];
+                        if (!group) {
+                            next[`${capability}Models`] = [];
+                            continue;
+                        }
+                        next[`${capability}Models`] = (group.channels || [{ ...group, id: `${capability}-default` }]).flatMap((item) => item.models.map((id) => encodeChannelModel(item.id || `${capability}-default`, id)));
+                        const saved = state.config[`${capability}Model`];
+                        if (decodeChannelModel(saved)?.channelId === BACKEND_API_CHANNEL_ID) next[`${capability}Model`] = encodeChannelModel(`${capability}-default`, modelOptionName(saved));
+                    }
+                    next.model = next.imageModel;
+                    return { config: next };
+                }),
             isAiConfigReady: (config, model) => isAiConfigReady(config, model),
             openConfigDialog: (shouldPromptContinue = false, configTab = "apis") => set({ isConfigOpen: true, shouldPromptContinue, configTab }),
             setConfigDialogOpen: (isConfigOpen) => set({ isConfigOpen }),
@@ -219,10 +272,10 @@ export const useConfigStore = create<ConfigStore>()(
                         apiFormat: normalizeApiFormat(config.apiFormat),
                         channels,
                         models,
-                        imageModel: normalizeModelOptionValue(config.imageModel || config.model, channels),
-                        videoModel: normalizeModelOptionValue(config.videoModel || "grok-imagine-video", channels),
-                        textModel: normalizeModelOptionValue(config.textModel || config.model, channels),
-                        audioModel: normalizeModelOptionValue(config.audioModel || defaultConfig.audioModel, channels),
+                        imageModel: normalizeModelOptionValue(config.imageModel || config.model, channels) || config.imageModel || config.model,
+                        videoModel: normalizeModelOptionValue(config.videoModel, channels) || config.videoModel,
+                        textModel: normalizeModelOptionValue(config.textModel, channels) || config.textModel,
+                        audioModel: normalizeModelOptionValue(config.audioModel || defaultConfig.audioModel, channels) || config.audioModel || defaultConfig.audioModel,
                         audioVoice: config.audioVoice || defaultConfig.audioVoice,
                         audioFormat: config.audioFormat || defaultConfig.audioFormat,
                         audioSpeed: config.audioSpeed || defaultConfig.audioSpeed,
@@ -264,6 +317,7 @@ export function createModelChannel(channel?: Partial<ModelChannel>): ModelChanne
         baseUrl: channel?.baseUrl?.trim() || defaultBaseUrlForApiFormat(apiFormat),
         apiKey: channel?.apiKey || "",
         apiFormat,
+        textProtocol: channel?.textProtocol || "responses",
         models: uniqueRawModels(channel?.models || []),
     };
 }
@@ -290,7 +344,7 @@ export function modelOptionLabel(config: AiConfig, value: string) {
     const decoded = decodeChannelModel(value);
     if (!decoded) return value;
     const channel = config.channels.find((item) => item.id === decoded.channelId);
-    return channel ? `${decoded.model}（${channel.name}）` : decoded.model;
+    return channel ? `${channel.name} / ${decoded.model}` : `${decoded.model}（渠道不可用）`;
 }
 
 export function modelOptionsFromChannels(channels: ModelChannel[]) {
@@ -313,17 +367,20 @@ export function resolveModelChannel(config: AiConfig, value: string) {
     const decoded = decodeChannelModel(value);
     const model = decoded?.model || value;
     const matched = decoded ? config.channels.find((channel) => channel.id === decoded.channelId) : config.channels.find((channel) => channel.models.includes(model));
+    if (decoded && !matched) return createModelChannel({ id: decoded.channelId, name: "渠道不可用", baseUrl: BACKEND_API_BASE_URL, models: [], apiKey: "" });
     return matched || config.channels[0] || createModelChannel({ id: "default", name: "默认渠道", baseUrl: config.baseUrl, apiKey: config.apiKey, apiFormat: config.apiFormat, models: config.models.map(modelOptionName) });
 }
 
-export function resolveModelRequestConfig(config: AiConfig, value: string) {
+export function resolveModelRequestConfig(config: AiConfig, value: string, allowUnavailable = false) {
     const channel = resolveModelChannel(config, value);
+    if (!channel.apiKey || !value || (!allowUnavailable && !channel.models.includes(modelOptionName(value)))) throw new Error("请在设置中获取上游模型并重新选择模型");
     return {
         ...config,
         model: modelOptionName(value || config.model),
         baseUrl: channel.baseUrl,
         apiKey: channel.apiKey,
         apiFormat: channel.apiFormat,
+        textProtocol: channel.textProtocol,
     };
 }
 
@@ -353,17 +410,13 @@ function normalizeChannels(config: AiConfig) {
 }
 
 function normalizeBackendManagedChannels(channels: ModelChannel[]) {
-    const allModels = uniqueRawModels([...APP_DEFAULT_MODELS, ...channels.flatMap((channel) => channel.models || [])]);
-    return [
+    return channels.map((channel) =>
         createModelChannel({
-            id: BACKEND_API_CHANNEL_ID,
-            name: "本地 API",
-            baseUrl: BACKEND_API_BASE_URL,
+            ...channel,
+            baseUrl: channel.id === BACKEND_API_CHANNEL_ID ? BACKEND_API_BASE_URL : `${BACKEND_API_BASE_URL}/channels/${encodeURIComponent(channel.id)}`,
             apiKey: BACKEND_API_KEY_PLACEHOLDER,
-            apiFormat: "openai",
-            models: allModels,
         }),
-    ];
+    );
 }
 
 export function defaultBaseUrlForApiFormat(apiFormat: ApiCallFormat) {
@@ -394,7 +447,9 @@ export function buildApiUrl(baseUrl: string, path: string) {
 
 function shouldUseProviderProxy(apiBaseUrl: string) {
     if (typeof window === "undefined") return false;
-    const providerApiBaseUrl = `${APP_BASE_URL.replace(/\/+$/, "")}/v1`.toLowerCase();
+    const providerApiBaseUrl = APP_BASE_URL.replace(/\/+$/, "")
+        .replace(/(?:\/v1)?$/, "/v1")
+        .toLowerCase();
     return apiBaseUrl.toLowerCase() === providerApiBaseUrl;
 }
 
@@ -414,4 +469,12 @@ function normalizeArkPlanBaseUrl(baseUrl: string) {
     } catch {
         return baseUrl;
     }
+}
+
+// A global save supersedes older per-node/session choices; later explicit choices remain local.
+export function resolveConfiguredModel(config: AiConfig, capability: ModelCapability, localModel?: string, revision?: string) {
+    if (localModel && (!config.defaultModelsRevision || revision === config.defaultModelsRevision)) {
+        return decodeChannelModel(localModel)?.channelId === BACKEND_API_CHANNEL_ID && config.channels.some((channel) => channel.id === `${capability}-default`) ? encodeChannelModel(`${capability}-default`, modelOptionName(localModel)) : localModel;
+    }
+    return config[`${capability}Model`];
 }

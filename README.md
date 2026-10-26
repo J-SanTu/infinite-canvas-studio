@@ -1,5 +1,10 @@
 # Santu Infinite Canvas
 
+## 1.0.0 正式版 · 2026-10-26
+
+整合画布 AI 对话、多模态方案工作流、拖拽引用、本地技能、多 API 渠道和模型批选、参考图网格与组合、素材模板及历史导航。修复侧栏高亮与模板/吸附跨重启保存。支持正式版覆盖安装并保留数据；Beta 数据独立。详见 [1.0.0 更新说明](https://github.com/J-SanTu/infinite-canvas-studio/releases/tag/v1.0.0)。
+
+
 [**EN**](#santu-infinite-canvas) · [中文](#santu-无限画布)
 
 Santu Infinite Canvas is a local-first, single-user AI creative desktop workspace. It connects prompts, references, generated media, and delivery work on one reusable canvas without requiring an account.
@@ -71,8 +76,8 @@ Open `http://127.0.0.1:5200`. The production command runs one Node process and s
 
 For end users, use the direct download for your platform:
 
-- Windows x64: [download the installer](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu-Infinite-Canvas-0.5.0-Windows-setup.exe). Close the app and run the installer to update the existing installation. User data is preserved.
-- macOS Apple Silicon: [download the PKG installer](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu-Infinite-Canvas-0.5.0-arm64.pkg). Close the app and run the installer; it replaces `/Applications/Santu Infinite Canvas.app`, including same-version updates, while preserving user data. The PKG is not Developer ID signed or notarized.
+- Windows x64: [download the installer](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v1.0.0/Santu-Infinite-Canvas-1.0.0-Windows-setup.exe). Close the app and run the installer to update the existing installation. User data is preserved.
+- macOS Apple Silicon: [download the PKG installer](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v1.0.0/Santu-Infinite-Canvas-1.0.0-arm64.pkg). Close the app and run the installer; it replaces `/Applications/Santu Infinite Canvas.app`, including same-version updates, while preserving user data. The PKG is not Developer ID signed or notarized.
 
 The packaged apps include their runtime and do not require Node.js, pnpm, or a separate launcher.
 
@@ -222,8 +227,8 @@ pnpm start
 
 普通用户可直接选择对应平台下载：
 
-- Windows x64：[下载安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu-Infinite-Canvas-0.5.0-Windows-setup.exe)。退出软件后运行安装器，沿用已有安装目录覆盖更新，保留用户数据。
-- Apple 芯片 macOS：[下载 PKG 安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v0.5.0/Santu-Infinite-Canvas-0.5.0-arm64.pkg)。退出软件后运行安装器，固定覆盖“应用程序”里的旧版，同版本也可覆盖，保留用户数据。此 PKG 尚未进行 Developer ID 签名与 Apple 公证。
+- Windows x64：[下载安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v1.0.0/Santu-Infinite-Canvas-1.0.0-Windows-setup.exe)。退出软件后运行安装器，沿用已有安装目录覆盖更新，保留用户数据。
+- Apple 芯片 macOS：[下载 PKG 安装版](https://github.com/J-SanTu/infinite-canvas-studio/releases/download/v1.0.0/Santu-Infinite-Canvas-1.0.0-arm64.pkg)。退出软件后运行安装器，固定覆盖“应用程序”里的旧版，同版本也可覆盖，保留用户数据。此 PKG 尚未进行 Developer ID 签名与 Apple 公证。
 
 打包应用已包含运行所需环境，不需要另外安装 Node.js、pnpm，也不需要启动脚本。
 

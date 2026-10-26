@@ -1,3 +1,4 @@
+import { recordDiagnostic } from "@/services/diagnostics";
 import localforage from "localforage";
 import type { StateStorage } from "zustand/middleware";
 
@@ -19,7 +20,8 @@ export const localForageStorage: StateStorage = {
         if (typeof window === "undefined") return;
         try {
             await localforage.setItem(name, value);
-        } catch {
+        } catch (error) {
+            recordDiagnostic("storage.fallback", { action: "write", error: error instanceof Error ? error.message : String(error) }, "warn");
             window.localStorage.setItem(name, value);
         }
     },

@@ -29,16 +29,9 @@ if not exist node_modules (
   if errorlevel 1 goto :failed
 )
 
-if not exist dist\index.html (
-  echo Building the application...
-  where pnpm >nul 2>nul
-  if errorlevel 1 (
-    call npm run build
-  ) else (
-    call pnpm build
-  )
-  if errorlevel 1 goto :failed
-)
+echo Building the current source version...
+node node_modules\vite\bin\vite.js build
+if errorlevel 1 goto :failed
 
 node desktop\start-browser.js
 exit /b %errorlevel%

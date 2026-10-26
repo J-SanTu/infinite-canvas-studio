@@ -14,6 +14,11 @@ process.env.CANVAS_IMAGE_USAGE_OUTBOX_PATH = join(dataRoot, "image-usage-outbox.
 process.env.CANVAS_ASSET_CHANGE_DB_PATH = join(dataRoot, "asset-changes.sqlite");
 
 const upstream = createHttpServer(async (req, res) => {
+    if (req.url === "/v1/models") {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ data: [{ id: "local-text-model" }] }));
+        return;
+    }
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     res.setHeader("Content-Type", "application/json");

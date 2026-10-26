@@ -1,3 +1,4 @@
+import { logEvent } from "./diagnostic-log.js";
 import { randomUUID } from "node:crypto";
 
 import { createId, readDb, updateDb } from "./store.js";
@@ -32,7 +33,9 @@ export function normalizeRunStatus(value, fallback = "queued") {
 }
 
 export async function createGenerationRun(userId, input = {}) {
-    return updateDb((db) => createGenerationRunRecord(db, userId, input));
+    const run = await updateDb((db) => createGenerationRunRecord(db, userId, input));
+    logEvent("info", "task.created", { runId: run.id, requestId: run.requestId, projectId: run.projectId, model: run.modelId, operation: run.operation, status: run.status, created: run.created });
+    return run;
 }
 
 export function createGenerationRunRecord(db, userId, input = {}) {
@@ -106,7 +109,7 @@ export async function listGenerationRuns(userId, filters = {}) {
 export async function transitionGenerationRun(userId, runId, nextStatus, patch = {}) {
     const status = normalizeRunStatus(nextStatus);
     const now = new Date().toISOString();
-    return updateDb((db) => {
+    const result = await updateDb((db) => {
         const run = db.generationRuns.find((item) => item.id === runId && item.userId === userId);
         if (!run) throw notFound("任务不存在");
         if (run.status !== status && !STATUS_TRANSITIONS[run.status]?.has(status)) {
@@ -126,6 +129,8 @@ export async function transitionGenerationRun(userId, runId, nextStatus, patch =
                 .slice(0, 500);
         return publicGenerationRun(run);
     });
+    logEvent(status.includes("failed") ? "error" : "info", "task.transition", { runId: result.id, requestId: result.requestId, projectId: result.projectId, model: result.modelId, status, errorCode: result.errorCode, errorMessage: result.errorMessageSafe });
+    return result;
 }
 
 export async function retryGenerationRun(userId, runId) {

@@ -23,6 +23,7 @@ async function fixture(exportFailures = 0) {
    '@/stores/use-config-store':{useConfigStore:{getState:()=>({config:{tinifyApiKey:''}})}},
    '@/services/api/image':{requestEdit},
    '@/services/backend-api-status':{},
+   '@/services/diagnostics':{recordDiagnostic:()=>{}},
  };
  const source=await readFile(new URL('../../src/services/batch-white-tasks.ts',import.meta.url),'utf8');
  const code=ts.transpileModule(source+`\nfileDataUrl=async()=>"source";exportJpeg=async()=>{ if (exportFailuresLeft-- > 0) throw Object.assign(new Error("1254×1254"),{name:"NativeResolutionError"}); return "jpg"; };compressWithTinify=async()=>{ compressionHook();return "compressed"; };`, {compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true,target:ts.ScriptTarget.ES2022}}).outputText;

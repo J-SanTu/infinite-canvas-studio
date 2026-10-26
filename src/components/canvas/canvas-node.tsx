@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ChevronRight, Clapperboard, Group, Image as ImageIcon, Music2, RefreshCw, Star, Video } from "lucide-react";
+import { Clapperboard, Group, Image as ImageIcon, Music2, RefreshCw, Star, Video } from "lucide-react";
 
 import { canvasThemes } from "@/lib/canvas-theme";
 import { formatBytes } from "@/lib/image-utils";
 import { useThemeStore } from "@/stores/use-theme-store";
+import { PileCover } from "./pile-cover";
 import { CanvasResourceMentionTextarea } from "./canvas-resource-mention-textarea";
 import { CanvasNodeType, type CanvasNodeData, type Position } from "@/types/canvas";
 import type { CanvasResourceReference } from "@/lib/canvas/canvas-resource-references";
@@ -294,7 +295,7 @@ export const CanvasNode = React.memo(function CanvasNode({
             }}
             onContextMenu={(event) => onContextMenu(event, data.id)}
         >
-            <div className="absolute left-3 top-[-28px] z-[65] max-w-[calc(100%-24px)]" onMouseDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+            {!data.metadata?.isPile ? <div className="absolute left-3 top-[-28px] z-[65] max-w-[calc(100%-24px)]" onMouseDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
                 {isEditingTitle ? (
                     <input
                         ref={titleInputRef}
@@ -326,15 +327,16 @@ export const CanvasNode = React.memo(function CanvasNode({
                         {data.title || "未命名节点"}
                     </button>
                 )}
-            </div>
+            </div> : null}
 
             <div
                 className="relative h-full w-full overflow-visible rounded-3xl border-2"
                 style={{
                     background: isGroup ? `${theme.toolbar.panel}66` : hasImageContent || hasVideoContent ? "transparent" : theme.node.fill,
-                    borderColor: isGroup ? (isGroupDropTarget || isActive ? selectionBlue : theme.node.stroke) : hasImageContent ? imageBorderColor : isActive ? selectionBlue : isRelated ? theme.node.muted : theme.node.stroke,
+                    borderColor: data.metadata?.isPile ? "transparent" : isGroup ? (isGroupDropTarget || isActive ? selectionBlue : theme.node.stroke) : hasImageContent ? imageBorderColor : isActive ? selectionBlue : isRelated ? theme.node.muted : theme.node.stroke,
                     borderStyle: isGroup ? "dashed" : "solid",
-                    boxShadow: isGroupDropTarget ? `0 0 0 2px ${selectionBlue}66, inset 0 0 0 999px ${selectionBlue}10` : isActive ? `0 0 0 1px ${selectionBlue}55` : isRelated && !isBatchChild ? `0 0 0 1px ${theme.node.muted}55, 0 18px 48px rgba(0,0,0,.14)` : undefined,
+                    transform: data.metadata?.stackId ? `rotate(${((data.id.charCodeAt(0) || 0) % 7) - 3}deg)` : undefined,
+                    boxShadow: data.metadata?.isPile ? undefined : isGroupDropTarget ? `0 0 0 2px ${selectionBlue}66, inset 0 0 0 999px ${selectionBlue}10` : isActive ? `0 0 0 1px ${selectionBlue}55` : data.metadata?.stackId ? "0 14px 30px rgba(0,0,0,.18)" : isRelated && !isBatchChild ? `0 0 0 1px ${theme.node.muted}55, 0 18px 48px rgba(0,0,0,.14)` : undefined,
                 }}
                 onMouseDown={(event) => onMouseDown(event, data.id)}
                 onDoubleClick={(event) => {
@@ -388,8 +390,13 @@ export const CanvasNode = React.memo(function CanvasNode({
                     />
                 </div>
 
-                {showImageInfo && hasImageContent ? <ImageInfoBar node={data} /> : null}
-                {resourceLabel ? <ResourceLabelBadge reference={resourceLabel} /> : null}
+                {data.metadata?.isPile ? <div
+                    className="pointer-events-none absolute -inset-[2px] z-40 rounded-3xl border-2"
+                    style={{ borderColor: imageBorderColor, boxShadow: isActive ? `0 0 0 1px ${selectionBlue}55` : undefined }}
+                /> : null}
+
+                {showImageInfo && hasImageContent && !data.metadata?.isPile ? <ImageInfoBar node={data} /> : null}
+                {resourceLabel && !data.metadata?.isPile ? <ResourceLabelBadge reference={resourceLabel} /> : null}
 
                 {!isGroup && !hasImageContent && !hasVideoContent && !hasAudioContent ? <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12" style={{ background: `linear-gradient(to top, ${theme.canvas.background}66, transparent)` }} /> : null}
 
@@ -668,6 +675,10 @@ function ImageContent({
         return <ErrorContent node={{ ...node, metadata: { ...node.metadata, errorDetails: "图片文件丢失，请重新上传或重新生成。" } }} theme={theme} onRetry={undefined} />;
     }
 
+    if (node.metadata?.isPile) {
+        return <PileCover src={node.metadata?.content || ""} title={node.title} radius={22 * 150 / Math.max(1, Math.min(node.width, node.height) - 4)} onError={() => setLoadFailed(true)} />;
+    }
+
     return (
         <BatchFrame batchCount={isBatchRoot ? batchCount : 0} batchExpanded={batchExpanded} batchOpening={batchOpening} batchRecovering={batchRecovering} onToggleBatch={onToggleBatch}>
             <div className="h-full w-full overflow-hidden rounded-3xl">
@@ -680,23 +691,6 @@ function ImageContent({
                     className={`pointer-events-none block h-full w-full select-none ${node.metadata?.freeResize ? "object-fill" : "object-contain"}`}
                 />
             </div>
-            {isBatchRoot ? (
-                <button
-                    type="button"
-                    className="absolute right-2.5 top-2.5 z-30 flex h-8 items-center justify-center gap-1 rounded-full border px-2.5 text-xs font-semibold shadow-[0_6px_18px_rgba(15,23,42,.10)] backdrop-blur-md transition hover:scale-[1.02]"
-                    style={{ background: `${theme.toolbar.panel}d9`, borderColor: `${theme.toolbar.border}cc`, color: theme.node.text }}
-                    aria-label={batchExpanded ? "图片组已展开" : "图片组已收起"}
-                    onClick={(event) => {
-                        event.stopPropagation();
-                        onToggleBatch?.();
-                    }}
-                    onMouseDown={(event) => event.stopPropagation()}
-                    onPointerDown={(event) => event.stopPropagation()}
-                >
-                    <span className="leading-none text-[#2f80ff]">{batchCount}</span>
-                    <ChevronRight className={`size-3.5 opacity-55 transition-transform ${batchExpanded ? "rotate-90" : ""}`} />
-                </button>
-            ) : null}
             {isBatchChild ? (
                 <button
                     type="button"
@@ -748,7 +742,10 @@ function BatchFrame({ batchCount, batchExpanded, batchOpening, batchRecovering, 
         >
             {isBatchRoot ? (
                 <div className="pointer-events-none absolute inset-0 overflow-visible">
-                    {Array.from({ length: Math.min(batchCount - 1, 5) }).map((_, index) => (
+                    {Array.from({ length: Math.min(batchCount - 1, 4) }).map((_, index) => {
+                        const side = index < 2 ? -1 : 1;
+                        const depth = index % 2;
+                        return (
                         <div
                             key={index}
                             className="absolute rounded-[inherit] border shadow-[0_14px_34px_rgba(68,64,60,.16)] transition-all duration-300 group-hover/batch:translate-x-2"
@@ -756,13 +753,15 @@ function BatchFrame({ batchCount, batchExpanded, batchOpening, batchRecovering, 
                                 inset: 0,
                                 background: `linear-gradient(135deg, ${theme.node.panel}, ${theme.node.fill})`,
                                 borderColor: theme.node.stroke,
-                                opacity: batchExpanded && !batchOpening ? 0.34 : 1,
+                                opacity: batchExpanded && !batchOpening ? 0.18 : depth === 0 ? 0.2 : 0.6,
+                                filter: depth === 0 ? "blur(4px)" : "blur(1.5px)",
                                 transform:
-                                    batchOpening || batchRecovering ? `translate(${54 + index * 22}px, ${20 + index * 12}px) rotate(${8 + index * 5}deg) scale(.98)` : `translate(${34 + index * 18}px, ${14 + index * 10}px) rotate(${6 + index * 4}deg)`,
+                                    batchOpening || batchRecovering ? `translate(${side * (54 + depth * 22)}px, ${20 + depth * 12}px) rotate(${side * (8 + depth * 5)}deg) scale(.98)` : `translate(${side * (34 + depth * 18)}px, ${14 + depth * 10}px) rotate(${side * (6 + depth * 4)}deg)`,
                                 zIndex: -index - 1,
                             }}
                         />
-                    ))}
+                        );
+                    })}
                 </div>
             ) : null}
             {children}

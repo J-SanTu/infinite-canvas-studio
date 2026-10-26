@@ -1,8 +1,11 @@
 import type { CanvasNodeData } from "@/types/canvas";
 
+// 150px total visual height, including the 174/150 fan overflow.
+export const PILE_COVER_SIZE = 130;
+
 export type CanvasAlignmentAction = "left" | "horizontal-center" | "right" | "top" | "vertical-center" | "bottom";
 export type CanvasDistributionAction = "horizontal" | "vertical";
-export type CanvasLayoutAction = CanvasAlignmentAction | `distribute-${CanvasDistributionAction}`;
+export type CanvasLayoutAction = CanvasAlignmentAction | `distribute-${CanvasDistributionAction}` | "grid" | "stack";
 
 export function getCanvasLayoutSelection(nodes: CanvasNodeData[], selectedIds: ReadonlySet<string>) {
     const explicitlySelected = nodes.filter((node) => selectedIds.has(node.id));
@@ -20,6 +23,7 @@ export function layoutCanvasNodes(nodes: CanvasNodeData[], selectedIds: Readonly
     const minimum = action.startsWith("distribute-") ? 3 : 2;
     if (selection.length < minimum) return nodes;
 
+    if (action === "grid" || action === "stack") return applyPlacement(nodes, selection, action);
     const nextPositions = action.startsWith("distribute-") ? distributeSelection(selection, action === "distribute-horizontal" ? "horizontal" : "vertical") : alignSelection(selection, action as CanvasAlignmentAction);
     const directDeltas = new Map<string, { x: number; y: number }>();
     selection.forEach((node) => {
@@ -55,6 +59,35 @@ export function layoutCanvasNodes(nodes: CanvasNodeData[], selectedIds: Readonly
         return { ...node, position: { x: node.position.x + delta.x, y: node.position.y + delta.y } };
     });
     return changed ? result : nodes;
+}
+
+function applyPlacement(nodes: CanvasNodeData[], selection: CanvasNodeData[], action: "grid" | "stack") {
+    const ordered = [...selection].sort((a, b) => a.id.localeCompare(b.id));
+    const anchor = ordered[0];
+    if (action === "stack") {
+        if (ordered.some(node => node.type !== "image" || node.metadata?.isBatchRoot || node.metadata?.batchRootId)) return nodes;
+        const id = `pile-${crypto.randomUUID()}`;
+        const pileSize = PILE_COVER_SIZE;
+        const root: CanvasNodeData = { ...anchor, id, title: anchor.title, width: pileSize, height: pileSize,
+            metadata: { ...anchor.metadata, stackId: undefined, isPile: true, isBatchRoot: true, batchChildIds: ordered.map(node => node.id), imageBatchExpanded: false } };
+        const ids = new Set(ordered.map(node => node.id));
+        return [...nodes.map(node => ids.has(node.id) ? { ...node, metadata: { ...node.metadata, stackId: undefined, batchRootId: id } } : node), root];
+    }
+
+    const gap = 28;
+    const columns = Math.max(1, Math.ceil(Math.sqrt(ordered.length)));
+    const cellWidth = Math.max(...ordered.map((node) => node.width));
+    const cellHeight = Math.max(...ordered.map((node) => node.height));
+    const placements = new Map<string, { x: number; y: number }>();
+    ordered.forEach((node, index) => {
+        placements.set(node.id, { x: anchor.position.x + (index % columns) * (cellWidth + gap), y: anchor.position.y + Math.floor(index / columns) * (cellHeight + gap) });
+    });
+    const deltas = new Map(ordered.map((node) => [node.id, { x: placements.get(node.id)!.x - node.position.x, y: placements.get(node.id)!.y - node.position.y }]));
+    return nodes.map((node) => {
+        const delta = deltas.get(node.id);
+        if (!delta) return node;
+        return { ...node, position: { x: node.position.x + delta.x, y: node.position.y + delta.y }, metadata: { ...node.metadata, stackId: undefined } };
+    });
 }
 
 function alignSelection(selection: CanvasNodeData[], action: CanvasAlignmentAction) {

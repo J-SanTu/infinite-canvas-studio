@@ -1,3 +1,11 @@
+import { startDiagnostics, instrumentStore } from "@/services/diagnostics";
+import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
+import { useAssetStore } from "@/stores/use-asset-store";
+import { useConfigStore } from "@/stores/use-config-store";
+import { usePromptLibraryStore } from "@/stores/use-prompt-library-store";
+import { useAgentStore } from "@/stores/use-agent-store";
+import { useWorkbenchAgentStore } from "@/stores/use-workbench-agent-store";
+import { useThemeStore } from "@/stores/use-theme-store";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "antd/dist/reset.css";
@@ -7,6 +15,15 @@ import { RouterProvider } from "react-router-dom";
 
 import { AppProviders } from "@/components/layout/app-providers";
 import { router } from "@/router";
+
+startDiagnostics();
+instrumentStore("canvas", useCanvasStore);
+instrumentStore("asset", useAssetStore);
+instrumentStore("config", useConfigStore);
+instrumentStore("prompt-library", usePromptLibraryStore);
+instrumentStore("agent", useAgentStore);
+instrumentStore("workbench-agent", useWorkbenchAgentStore);
+instrumentStore("theme", useThemeStore);
 
 document.body.style.fontFamily = '"SF Pro Display","SF Pro Text","PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif';
 

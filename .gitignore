@@ -19,4 +19,15 @@ server/data/
 /release-v*/
 /node_modules
 
+/macOS-superfix/
+
+/macOS-realesrgan/
+/Windows-realesrgan/
+
+/macOS-planA/
+/Windows-planA/
+
+/macOS-single-download/
+/Windows-single-download/
+
 /.build.noindex/
