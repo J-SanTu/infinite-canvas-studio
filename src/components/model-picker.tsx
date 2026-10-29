@@ -3,9 +3,10 @@ import { Cpu } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { modelOptionLabel, modelOptionName, selectableModelsByCapability, type AiConfig, type ModelCapability } from "@/stores/use-config-store";
+import { resolveModelChannel, modelOptionLabel, modelOptionName, selectableModelsByCapability, type AiConfig, type ModelCapability } from "@/stores/use-config-store";
 
 type ModelPickerProps = {
+    disabled?: boolean;
     config: AiConfig;
     value?: string;
     onChange: (model: string) => void;
@@ -16,11 +17,15 @@ type ModelPickerProps = {
     onMissingConfig?: () => void;
 };
 
-export function ModelPicker({ config, value, onChange, capability, className, fullWidth = false, placeholder = "选择模型", onMissingConfig }: ModelPickerProps) {
+export function ModelPicker({ disabled, config, value, onChange, capability, className, fullWidth = false, placeholder = "选择模型", onMissingConfig }: ModelPickerProps) {
     const pickerId = useId();
     const [open, setOpen] = useState(false);
     const options = useMemo(() => Array.from(new Set(selectableModelsByCapability(config, capability).filter((model): model is string => Boolean(model)))), [capability, config, value]);
-    const current = value && options.includes(value) ? value : "";
+    const current = value || "";
+    const channel = current ? resolveModelChannel(config, current) : null;
+    const unavailable = current && !options.includes(current);
+    const waiting = channel?.modelsStatus && channel.modelsStatus !== "ready";
+    const label = current ? `${modelOptionLabel(config, current)}${waiting ? "（列表待验证）" : unavailable ? "（模型不可用）" : ""}` : placeholder;
 
     useEffect(() => {
         const closeOtherPicker = (event: Event) => {
@@ -32,6 +37,7 @@ export function ModelPicker({ config, value, onChange, capability, className, fu
 
     return (
         <Select
+            disabled={disabled}
             open={open}
             value={current}
             onOpenChange={(nextOpen) => {
@@ -50,10 +56,10 @@ export function ModelPicker({ config, value, onChange, capability, className, fu
                 )}
                 onMouseDown={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
-                title={current ? modelOptionLabel(config, current) : placeholder}
+                title={label}
             >
                 <ModelIcon model={current} />
-                <span className="canvas-model-picker-text min-w-0 flex-1 truncate text-left">{current ? modelOptionLabel(config, current) : placeholder}</span>
+                <span className="canvas-model-picker-text min-w-0 flex-1 truncate text-left">{label}</span>
             </SelectTrigger>
             <SelectContent
                 data-canvas-no-zoom
@@ -65,9 +71,10 @@ export function ModelPicker({ config, value, onChange, capability, className, fu
                 onPointerDown={(event) => event.stopPropagation()}
                 onMouseDown={(event) => event.stopPropagation()}
             >
+                {unavailable && <SelectItem value={current} disabled>{label}</SelectItem>}
                 {options.length ? (
                     options.map((model) => (
-                        <SelectItem key={model} value={model} textValue={modelOptionLabel(config, model)}>
+                        <SelectItem disabled={!!resolveModelChannel(config, model).modelsStatus && resolveModelChannel(config, model).modelsStatus !== "ready"} key={model} value={model} textValue={modelOptionLabel(config, model)}>
                             <ModelLabel config={config} model={model} />
                         </SelectItem>
                     ))

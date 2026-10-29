@@ -29,7 +29,6 @@ export async function discoverModels(config) {
         url.searchParams.set("pageToken", token);
     }
     const unique = [...new Set(models)];
-    if (!unique.length) throw new Error("上游返回空模型列表，请检查账号权限或接口配置");
     return unique;
 }
 

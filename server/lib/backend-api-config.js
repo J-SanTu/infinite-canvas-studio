@@ -88,13 +88,18 @@ async function saveLocalApiSetting(capability, input = {}) {
         modelsFetchedAt: "",
         updatedAt: new Date().toISOString(),
     };
+    const sameSource = current?.baseUrl === next.baseUrl && current?.apiKeyHash === next.apiKeyHash && current?.apiFormat === next.apiFormat && (current?.textProtocol || "responses") === next.textProtocol;
+    if (sameSource) {
+        next.models = current.models || [];
+        next.availableModels = current.availableModels || [];
+        next.modelsFetchedAt = current.modelsFetchedAt || "";
+    }
     if (normalizedCapability !== "tinify") {
         try {
             const secret = apiKey || (await decryptSecret(current.encryptedApiKey));
             registerLogSecret(secret);
             next.availableModels = await discoverModels({ ...next, apiKey: secret, capability: normalizedCapability });
-            const sameSource = current?.baseUrl === next.baseUrl && current?.apiKeyHash === next.apiKeyHash && current?.apiFormat === next.apiFormat;
-            next.models = sameSource && current?.modelsStatus === "ready" ? current.models.filter((id) => next.availableModels.includes(id)) : next.availableModels.filter((id) => inferModelCapability(id) === normalizedCapability);
+            next.models = sameSource && (current?.modelsStatus === "ready" || (current?.modelsStatus === "error" && Boolean(current?.modelsFetchedAt))) ? current.models.filter((id) => next.availableModels.includes(id)) : next.availableModels.filter((id) => inferModelCapability(id) === normalizedCapability);
             // Newly available models become selectable; defaults are selected explicitly in the UI.
             // Refresh preserves explicit selections; newly discovered models remain available to select.
             next.modelsStatus = "ready";
@@ -133,8 +138,8 @@ export function publicApiConfig(config, capability) {
         baseUrl: config?.baseUrl || defaults.baseUrl,
         apiFormat: config?.apiFormat || defaults.apiFormat,
         apiKeyFingerprint: config?.apiKeyHash ? config.apiKeyHash.slice(0, 12) : "",
-        models: config?.modelsStatus === "ready" ? normalizeModels(config.models) : [],
-        availableModels: config?.modelsStatus === "ready" ? normalizeModels(config.availableModels) : [],
+        models: config?.modelsStatus === "ready" || (config?.modelsStatus === "error" && config?.modelsFetchedAt) ? normalizeModels(config?.models) : [],
+        availableModels: config?.modelsStatus === "ready" || (config?.modelsStatus === "error" && config?.modelsFetchedAt) ? normalizeModels(config?.availableModels) : [],
         modelsStatus: normalizedCapability === "tinify" ? "not_required" : config?.modelsStatus || "unverified",
         modelsError: config?.modelsError || "",
         modelsFetchedAt: config?.modelsFetchedAt || "",

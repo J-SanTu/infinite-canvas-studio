@@ -1,11 +1,13 @@
+import { fileURLToPath } from "node:url";
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createServer } from 'vite';
 const saved = new Map();
 globalThis.localStorage = { getItem: key => saved.get(key) || null, setItem: (key, value) => saved.set(key, value), removeItem: key => saved.delete(key) };
 globalThis.window = { localStorage: globalThis.localStorage };
-const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+const vite = await createServer({ configFile: false, resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } }, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom' });
 const { defaultConfig, useConfigStore, resolveModelRequestConfig, resolveConfiguredModel } = await vite.ssrLoadModule('/src/stores/use-config-store.ts');
+useConfigStore.setState({ defaultsReady: true });
 test.after(async () => { await vite.close(); delete globalThis.localStorage; delete globalThis.window; });
 
 test('legacy default and local choices retain identity, unavailable defaults are preserved but cannot run', () => {
@@ -40,7 +42,7 @@ test('same model across channels has independent identity, deleted channel never
     assert.equal(resolveModelRequestConfig(config,'channel-a::shared').textProtocol,'chat');
     assert.throws(()=>resolveModelRequestConfig(config,'deleted::shared'),/重新选择/);
     assert.equal(useConfigStore.getState().isAiConfigReady(config,'deleted::shared'),false);
-    useConfigStore.getState().saveDefaultModels({...config,textModel:'channel-a::shared'});
+    useConfigStore.getState().updateConfig('textModel','channel-a::shared');
     await useConfigStore.persist.rehydrate();
     const restored=useConfigStore.getState().config;
     assert.equal(restored.textModel,'channel-a::shared');

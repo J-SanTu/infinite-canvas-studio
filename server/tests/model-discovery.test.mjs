@@ -66,6 +66,20 @@ test('refresh replaces stale lists, preserves stored key, and blocks old canvas 
     await save('text', { selectedModels: ids });
 });
 
+test('same-source transient failure retains selected models and recovers without recategorizing', async () => {
+    mode = 'denied';
+    const failed = await refresh();
+    assert.equal(failed.config.modelsStatus, 'error');
+    assert.deepEqual(failed.config.models, ['provider-text-next']);
+    assert.deepEqual(failed.config.availableModels, ['provider-text-next']);
+    assert.ok(failed.config.modelsFetchedAt);
+    const before = calls.length;
+    assert.equal((await request('/api/ai/v1/responses', 'POST', { model: 'provider-text-next' })).status, 409);
+    assert.equal(calls.length, before);
+    mode = 'ok';
+    assert.deepEqual((await refresh()).config.models, ['provider-text-next']);
+});
+
 test('credential changes and discovery failures never retain old models or leak provider errors', async () => {
     mode = 'denied';
     const failed = await save('text', { baseUrl, apiKey: 'replacement-fixture-key' });
@@ -79,9 +93,10 @@ test('credential changes and discovery failures never retain old models or leak 
     mode = 'malformed';
     assert.equal((await refresh()).config.modelsStatus, 'error');
     mode = 'ok'; ids = [];
-    assert.equal((await refresh()).config.modelsStatus, 'error');
+    assert.equal((await refresh()).config.modelsStatus, 'ready');
     ids = ['recovered-text'];
-    assert.deepEqual((await refresh()).config.models, ids);
+    assert.deepEqual((await refresh()).config.models, []);
+    await save('text', { selectedModels: ids });
     assert.equal(calls.at(-1).auth, 'Bearer replacement-fixture-key');
 });
 

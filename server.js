@@ -1,3 +1,4 @@
+import { getDefaultModels, saveDefaultModels } from "./server/lib/default-model-preferences.js";
 import { readDb, updateDb } from "./server/lib/store.js";
 import { listChatSkills, saveChatSkill, deleteChatSkill } from "./server/lib/chat-skills.js";
 import { handleDiagnostics, traceRequest, setDiagnosticDirectoryOpener } from "./server/lib/diagnostic-http.js";
@@ -72,6 +73,10 @@ const server = createServer(async (req, res) => {
             if (typeof input.snapToGrid === "boolean") patch.snapToGrid = input.snapToGrid;
             if (typeof input.hideConnections === "boolean") patch.hideConnections = input.hideConnections;
             return sendJson(res, 200, await updateDb(db => (db.canvasNavigation = {...db.canvasNavigation, ...patch})));
+        }
+        if (url.pathname === "/api/settings/default-models") {
+            if (req.method === "GET") return sendJson(res, 200, { defaults: await getDefaultModels() });
+            if (req.method === "PATCH") return sendJson(res, 200, { defaults: await saveDefaultModels(await readJson(req)) });
         }
         if (req.method === "GET" && url.pathname === "/api/settings/apis") {
             return sendJson(res, 200, { apis: await listLocalApiSettings() });

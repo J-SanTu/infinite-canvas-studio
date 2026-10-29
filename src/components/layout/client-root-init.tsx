@@ -1,3 +1,4 @@
+import { restoreDefaultModels } from "@/services/default-model-preferences";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { App } from "antd";
@@ -13,6 +14,7 @@ import { useAssetStore } from "@/stores/use-asset-store";
 
 export function ClientRootInit({ children }: { children: ReactNode }) {
     const { message } = App.useApp();
+    const defaultsError = useConfigStore(state => state.defaultsError);
     const handledConfigParams = useRef(false);
     const openConfigDialog = useConfigStore((state) => state.openConfigDialog);
     const checkedFirstRun = useRef(false);
@@ -23,7 +25,7 @@ export function ClientRootInit({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (cacheClearMode || checkedFirstRun.current) return;
         checkedFirstRun.current = true;
-        void fetchLocalApiSettings()
+        void restoreDefaultModels().then(() => fetchLocalApiSettings())
             .then(async (settings) => {
                 useConfigStore.getState().syncApiModels(settings);
                 const legacy = Object.values(settings)
@@ -89,6 +91,7 @@ export function ClientRootInit({ children }: { children: ReactNode }) {
             <CanvasBackendSync />
             <AssetBackendSync />
             <PromptLibrarySessionSync />
+            {defaultsError && <div role="alert" className="p-3 text-red-600">{defaultsError} <button onClick={() => void restoreDefaultModels()}>重试恢复</button></div>}
             {children}
         </>
     );

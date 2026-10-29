@@ -9,6 +9,7 @@ export type ApiCallFormat = "openai" | "gemini";
 
 export type ModelChannel = {
     textProtocol?: "chat" | "responses";
+    modelsStatus?: string;
     id: string;
     name: string;
     baseUrl: string;
@@ -106,11 +107,15 @@ export const defaultConfig: AiConfig = {
 };
 
 type ConfigStore = {
+    defaultsReady: boolean;
+    defaultsError: string;
+    defaultsSaveStatus: "idle" | "saving" | "saved" | "error";
+    defaultsSaveError: string;
+    pendingDefaults: Partial<DefaultModels>;
     config: AiConfig;
     isConfigOpen: boolean;
     configTab: ConfigTabKey;
     shouldPromptContinue: boolean;
-    saveDefaultModels: (models: DefaultModels) => void;
     syncApiModels: (settings: LocalApiSettings) => void;
     updateConfig: <K extends keyof AiConfig>(key: K, value: AiConfig[K]) => void;
     isAiConfigReady: (config: AiConfig, model: string) => boolean;
@@ -172,14 +177,19 @@ function modelListKey(capability: ModelCapability) {
     return `${capability}Models` as "imageModels" | "videoModels" | "textModels" | "audioModels";
 }
 
-function isAiConfigReady(config: AiConfig, model: string) {
+function isAiConfigReady(config: AiConfig, model: string): boolean {
     const channel = resolveModelChannel(config, model);
-    return Boolean(model.trim() && channel.models.includes(modelOptionName(model)) && channel.baseUrl.trim() && channel.apiKey.trim());
+    return Boolean(useConfigStore.getState().defaultsReady && (!channel.modelsStatus || channel.modelsStatus === "ready") && model.trim() && channel.models.includes(modelOptionName(model)) && channel.baseUrl.trim() && channel.apiKey.trim());
 }
 
 export const useConfigStore = create<ConfigStore>()(
     persist(
         (set, get) => ({
+            defaultsReady: false,
+            defaultsError: "",
+            defaultsSaveStatus: "idle",
+            defaultsSaveError: "",
+            pendingDefaults: {},
             config: defaultConfig,
             isConfigOpen: false,
             configTab: "apis",
@@ -192,14 +202,6 @@ export const useConfigStore = create<ConfigStore>()(
                         ...(key === "imageModel" ? { model: value as string } : {}),
                     },
                 })),
-            saveDefaultModels: (models) => {
-                const current = get().config;
-                for (const capability of ["image", "text", "video", "audio"] as const) {
-                    const value = models[`${capability}Model`];
-                    if (value && !selectableModelsByCapability(current, capability).includes(value)) throw new Error("所选模型已不可用，请刷新列表后重新选择。");
-                }
-                set({ config: { ...current, ...models, model: models.imageModel, defaultModelsRevision: nanoid() } });
-            },
             syncApiModels: (settings) =>
                 set((state) => {
                     const capabilities = ["image", "text", "video", "audio"] as const;
@@ -215,6 +217,7 @@ export const useConfigStore = create<ConfigStore>()(
                                       apiFormat: item.apiFormat,
                                       textProtocol: item.textProtocol || "responses",
                                       models: item.models,
+                                      modelsStatus: item.modelsStatus,
                                   }),
                               ),
                     );
@@ -319,6 +322,7 @@ export function createModelChannel(channel?: Partial<ModelChannel>): ModelChanne
         apiFormat,
         textProtocol: channel?.textProtocol || "responses",
         models: uniqueRawModels(channel?.models || []),
+        modelsStatus: channel?.modelsStatus,
     };
 }
 
@@ -373,6 +377,8 @@ export function resolveModelChannel(config: AiConfig, value: string) {
 
 export function resolveModelRequestConfig(config: AiConfig, value: string, allowUnavailable = false) {
     const channel = resolveModelChannel(config, value);
+    if (!useConfigStore.getState().defaultsReady) throw new Error("默认模型正在恢复，请稍后重试");
+    if (channel.modelsStatus && channel.modelsStatus !== "ready") throw new Error("模型列表刷新失败或尚未验证，请刷新后重试");
     if (!channel.apiKey || !value || (!allowUnavailable && !channel.models.includes(modelOptionName(value)))) throw new Error("请在设置中获取上游模型并重新选择模型");
     return {
         ...config,

@@ -1,3 +1,4 @@
+import { restoreDefaultModels, saveDefaultModel, retryDefaultModels } from "@/services/default-model-preferences";
 import { DiagnosticsPanel } from "@/components/layout/diagnostics-panel";
 import { Alert, App, Button, Checkbox, Form, Input, Modal, Select, Tabs, Tag } from "antd";
 import { KeyRound, RefreshCw, Save, Trash2 } from "lucide-react";
@@ -7,7 +8,7 @@ import { migrateTinifyKey } from "@/services/batch-white-tasks";
 import { ModelPicker } from "@/components/model-picker";
 import { fetchLocalApiSettings, refreshLocalApiModels, updateLocalApiSetting, type ApiCapability, type LocalApiConfig, type LocalApiSettings } from "@/services/backend-api-status";
 import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from "@/lib/audio-generation";
-import { useConfigStore, type DefaultModels, type ConfigTabKey, type ModelCapability } from "@/stores/use-config-store";
+import { useConfigStore, type ConfigTabKey, type ModelCapability } from "@/stores/use-config-store";
 
 type ModelGroup = {
     capability: ModelCapability;
@@ -33,20 +34,8 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "apis" }: 
     const [loading, setLoading] = useState(false);
     const settingsRef = useRef<LocalApiSettings | null>(null);
     const config = useConfigStore((state) => state.config);
-    const [modelDraft, setModelDraft] = useState<DefaultModels>(() => ({ imageModel: config.imageModel, textModel: config.textModel, videoModel: config.videoModel, audioModel: config.audioModel }));
-    const [modelsDirty, setModelsDirty] = useState(false);
-    useEffect(() => {
-        if (!modelsDirty) setModelDraft({ imageModel: config.imageModel, textModel: config.textModel, videoModel: config.videoModel, audioModel: config.audioModel });
-    }, [config.imageModel, config.textModel, config.videoModel, config.audioModel, modelsDirty]);
-    const saveModels = () => {
-        try {
-            useConfigStore.getState().saveDefaultModels(modelDraft);
-            setModelsDirty(false);
-            message.success("默认模型已保存，所有调用入口已更新");
-        } catch (error) {
-            message.error(error instanceof Error ? error.message : "保存失败");
-        }
-    };
+    const { defaultsReady, defaultsError, defaultsSaveStatus, defaultsSaveError, pendingDefaults } = useConfigStore();
+    useEffect(() => { void restoreDefaultModels(); }, []);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const setConfigDialogOpen = useConfigStore((state) => state.setConfigDialogOpen);
     const shouldPromptContinue = useConfigStore((state) => state.shouldPromptContinue);
@@ -81,9 +70,9 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "apis" }: 
     }, []);
 
     const finishConfig = () => {
-        if (modelsDirty) {
+        if (defaultsSaveStatus === "saving" || Object.keys(pendingDefaults).length) {
             setActiveTab("models");
-            message.warning("请先点击保存默认模型，或关闭窗口放弃修改。");
+            message.warning("默认模型尚未保存完成，请稍候或重试。");
             return;
         }
         setConfigDialogOpen(false);
@@ -129,11 +118,9 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "apis" }: 
                                         <Form.Item key={group.modelKey} label={group.defaultLabel} className="mb-0">
                                             <ModelPicker
                                                 config={config}
-                                                value={modelDraft[group.modelKey]}
-                                                onChange={(model) => {
-                                                    setModelDraft((draft) => ({ ...draft, [group.modelKey]: model }));
-                                                    setModelsDirty(true);
-                                                }}
+                                                value={pendingDefaults[group.modelKey] ?? config[group.modelKey]}
+                                                disabled={!defaultsReady}
+                                                onChange={(model) => { void saveDefaultModel(group.modelKey, model); }}
                                                 capability={group.capability}
                                                 fullWidth
                                             />
@@ -141,10 +128,9 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "apis" }: 
                                     ))}
                                 </div>
                                 <div className="mt-5 flex items-center gap-3">
-                                    <Button type="primary" icon={<Save className="size-4" />} onClick={saveModels}>
-                                        保存默认模型
-                                    </Button>
-                                    <span className="text-xs text-stone-500">{modelsDirty ? "有未保存的修改" : "保存后所有调用入口统一使用此默认设置；之后仍可单独调整。"}</span>
+                                    <span role="status" className="text-xs text-stone-500">{defaultsError || (!defaultsReady ? "正在恢复默认模型…" : defaultsSaveStatus === "saving" ? "保存中…" : defaultsSaveStatus === "error" ? `保存失败：${defaultsSaveError || "仍有未保存的选择"}` : defaultsSaveStatus === "saved" ? "已保存；关闭设置、刷新或重启后自动恢复。" : "选择后自动保存。")}</span>
+                                    {defaultsError && <Button onClick={() => void restoreDefaultModels()}>重试恢复</Button>}
+                                    {defaultsSaveStatus === "error" && <Button onClick={retryDefaultModels}>重试保存</Button>}
                                 </div>
                             </Form>
                         ),
@@ -397,7 +383,7 @@ function ApiSettingCard({ capability, config, onChange, isNew = false, onCancel 
             {capability !== "tinify" && (
                 <div className="mt-3 text-xs text-stone-500">
                     {config.modelsStatus === "error" ? (
-                        <Alert type="error" showIcon title={config.modelsError} description="API 配置已保存，当前没有可用模型列表。请检查后刷新，不会使用内置模型替代。" />
+                        <Alert type="error" showIcon title={config.modelsError} description="API 配置已保存；已保存的默认值及同一来源的历史列表会保留，验证成功前暂停调用。请检查后刷新，不会自动替换模型。" />
                     ) : config.modelsStatus === "ready" ? (
                         <span>
                             已从上游获取 {config.availableModels.length} 个模型，本用途已选 {config.models.length} 个。可调整上方分类，再到「模型」页选择默认模型。
